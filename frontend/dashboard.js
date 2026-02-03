@@ -1,5 +1,5 @@
 // Dashboard JavaScript
-const API_URL = 'https://surprising-sparkle-production.up.railway.app'; // Replace with actual Railway URL
+const API_URL = 'https://learn-loop-production.up.railway.app'; // Replace with actual Railway URL
 const socket = io(API_URL, { withCredentials: true });
 
 let currentUser = null;
