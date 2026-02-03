@@ -128,7 +128,7 @@ function closeLoginModal() {
 
 function handleGoogleLogin() {
     // Redirect to Google OAuth
-    window.location.href = 'http://localhost:5000/auth/google';
+    window.location.href = 'https://surprising-sparkle-production.up.railway.app/auth/google';
 }
 
 // ============================================
