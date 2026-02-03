@@ -35,6 +35,11 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 5000;
 
+// Trust Railway proxy
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 // Middleware
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5500',
