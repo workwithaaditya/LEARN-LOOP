@@ -1,6 +1,26 @@
 // ============================================
-// TEACHANDLEARN - FRONTEND JAVASCRIPT
+// LEARN LOOP - FRONTEND JAVASCRIPT
 // ============================================
+
+// ============================================
+// THEME TOGGLE FUNCTIONALITY
+// ============================================
+
+// Get theme toggle button
+const themeToggle = document.getElementById('themeToggle');
+
+// Check for saved theme preference or default to 'light'
+const currentTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', currentTheme);
+
+// Theme toggle event listener
+themeToggle.addEventListener('click', () => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    
+    document.documentElement.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+});
 
 // ============================================
 // GOOGLE LOGIN FUNCTIONALITY
@@ -107,15 +127,8 @@ function closeLoginModal() {
 // ============================================
 
 function handleGoogleLogin() {
-    console.log('Google Login clicked - Backend integration needed');
-    
-    // TODO: Replace this with actual Google OAuth
-    // For now, just show an alert
-    alert('Google OAuth integration pending.\n\nTo connect:\n1. Set up Google Cloud Console\n2. Add Google Sign-In library\n3. Implement handleCredentialResponse\n4. Create backend authentication endpoint');
-    
-    // Example of what you might do after successful auth:
-    // closeLoginModal();
-    // window.location.href = '/dashboard';
+    // Redirect to Google OAuth
+    window.location.href = 'http://localhost:5000/auth/google';
 }
 
 // ============================================

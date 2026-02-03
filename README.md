@@ -1,33 +1,186 @@
 # 🎓 Learn Loop Platform
 
-A premium, frontend-only website for a "Teach-to-Learn" platform where users can learn by teaching and teach by learning.
+A premium platform for a "Teach-to-Learn" concept where users can learn by teaching and teach by learning. Features Google OAuth authentication, real-time user matching, and video call capabilities.
 
 ![Learn Loop](https://img.shields.io/badge/Version-1.0.0-blue)
 ![HTML5](https://img.shields.io/badge/HTML5-E34F26?logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/CSS3-1572B6?logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?logo=javascript&logoColor=black)
+![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?logo=postgresql&logoColor=white)
 
 ## 🌟 Features
 
-- **Clean, Modern Design**: Professional UI with gradient accents and smooth transitions
+### Frontend
+- **Clean, Modern Design**: Professional UI with red/yellow gradient accents
+- **Dark/Light Mode**: Toggle between themes with localStorage persistence
 - **Fully Responsive**: Mobile-first design that looks great on all devices
-- **Google Login UI**: Ready-to-integrate Google OAuth button (backend connection needed)
 - **Smooth Animations**: Intersection Observer API for scroll-based animations
-- **Semantic HTML**: SEO-friendly and accessible markup
-- **CSS Variables**: Easy theming and customization
 - **Zero Dependencies**: Pure HTML, CSS, and vanilla JavaScript
+
+### Backend
+- **Google OAuth 2.0**: Secure authentication with Google accounts
+- **PostgreSQL Database**: Reliable and scalable data storage (Railway compatible)
+- **Real-time Features**: Socket.io for instant messaging and status updates
+- **User Profiles**: Skills, bio, availability status
+- **Random Video Matching**: Skill-based matching with skip functionality
+- **WebRTC Video Calls**: Peer-to-peer video communication
 
 ## 🚀 Quick Start
 
-### Local Development
+### Frontend Setup
 
-1. Clone the repository:
+1. Navigate to frontend folder:
 ```bash
-git clone https://github.com/workwithaaditya/Learn-Loop.git
-cd Learn-Loop
+cd frontend
 ```
 
-2. Open `index.html` in your browser:
+2. Open `index.html` with Live Server or any local server on port 5500
+
+### Backend Setup
+
+1. Navigate to backend folder:
+```bash
+cd backend
+npm install
+```
+
+2. Set up PostgreSQL on Railway (see backend/README.md)
+
+3. Configure environment variables in `.env`
+
+4. Start server:
+```bash
+npm run dev
+```
+
+## 📁 Project Structure
+
+```
+Learn-Loop/
+├── frontend/
+│   ├── index.html          # Landing page
+│   ├── dashboard.html      # User dashboard
+│   ├── styles.css          # Main styles
+│   ├── dashboard.css       # Dashboard styles
+│   ├── script.js           # Landing page logic
+│   ├── dashboard.js        # Dashboard logic
+│   └── favicon.png         # Favicon
+├── backend/
+│   ├── config/
+│   │   ├── database.js     # PostgreSQL connection
+│   │   └── passport.js     # Google OAuth config
+│   ├── models/
+│   │   └── User.js         # User model (Sequelize)
+│   ├── routes/
+│   │   ├── auth.js         # Authentication routes
+│   │   ├── users.js        # User CRUD routes
+│   │   └── match.js        # Matching algorithm
+│   ├── socket/
+│   │   └── socketHandler.js # WebSocket events
+│   ├── middleware/
+│   │   └── auth.js         # Auth middleware
+│   ├── server.js           # Express server
+│   ├── package.json
+│   └── .env                # Environment variables
+└── README.md
+```
+
+## 🛠️ Tech Stack
+
+### Frontend
+- HTML5, CSS3, JavaScript (ES6+)
+- Socket.io Client
+- WebRTC for video calls
+
+### Backend
+- **Node.js** & **Express.js**
+- **PostgreSQL** with **Sequelize ORM**
+- **Passport.js** for Google OAuth
+- **Socket.io** for real-time features
+- **WebRTC** for video calling
+
+## 🔧 Configuration
+
+### Frontend Configuration
+- Update API URL in `dashboard.js` if needed (default: `http://localhost:5000`)
+
+### Backend Configuration
+1. Create `.env` file in backend directory
+2. Add required environment variables (see backend/.env.example)
+
+## 🎯 How It Works
+
+1. **Login**: Users authenticate with Google OAuth
+2. **Profile Setup**: Add skills you want to teach/learn
+3. **Browse Users**: See all available users with their skills
+4. **Ping Users**: Send connection requests to specific users
+5. **Random Video Call**: Get matched with users based on skill compatibility
+6. **Video Chat**: Learn or teach via WebRTC video calls
+7. **Skip Feature**: Skip to next random match anytime
+
+## 📱 Features in Detail
+
+### User Dashboard
+- Profile management with avatar, bio, and skills
+- Availability toggle
+- Real-time user list
+- Ping/message functionality
+- Random video call matching
+
+### Video Calls
+- Skill-based matching algorithm
+- WebRTC peer-to-peer connection
+- Camera/microphone controls
+- Skip to next match
+- End call functionality
+
+## 🚀 Deployment
+
+### Frontend
+- Deploy to Netlify, Vercel, or GitHub Pages
+- Update `FRONTEND_URL` in backend `.env`
+
+### Backend
+- Deploy to Railway.app (recommended)
+- PostgreSQL automatically provisioned
+- Set environment variables in Railway dashboard
+
+## 📝 API Endpoints
+
+- `GET /auth/google` - Initiate Google OAuth
+- `GET /auth/current-user` - Get logged-in user
+- `GET /api/users` - Get all available users
+- `PUT /api/users/profile` - Update profile
+- `POST /api/match/find` - Find random match
+
+## 🔌 WebSocket Events
+
+- `user:join` - User connects
+- `user:ping` - Send message
+- `call:initiate` - Start video call
+- `call:answer` - Answer call
+- `call:end` - End call
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## 📄 License
+
+MIT License
+
+## 👨‍💻 Author
+
+**workwithaaditya**
+- GitHub: [@workwithaaditya](https://github.com/workwithaaditya)
+
+## 🙏 Acknowledgments
+
+- Google OAuth for authentication
+- Socket.io for real-time features
+- WebRTC for video calling
+- Railway for database hosting
 ```bash
 # On Windows
 start index.html

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Learn Loop</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="dashboard.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="container nav-container">
+            <div class="logo">
+                <img src="favicon.png" alt="Learn Loop Logo" width="32" height="32">
+                <span class="logo-text">Learn Loop</span>
+            </div>
+            
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+                    <svg class="sun-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                    </svg>
+                    <svg class="moon-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                    </svg>
+                </button>
+                <div class="user-menu" id="userMenu">
+                    <img id="userAvatar" src="" alt="User" class="user-avatar">
+                    <span id="userName"></span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="dashboard-container">
+        <div class="container">
+            <div class="dashboard-header">
+                <h1>Welcome to Learn Loop</h1>
+                <p>Connect with learners and teachers around the world</p>
+            </div>
+
+            <div class="dashboard-grid">
+                <!-- User Profile Card -->
+                <div class="card profile-card">
+                    <h2>Your Profile</h2>
+                    <div class="profile-section" id="profileSection">
+                        <div class="profile-info">
+                            <img id="profileAvatar" src="" alt="Profile">
+                            <div>
+                                <h3 id="profileName"></h3>
+                                <p id="profileEmail"></p>
+                            </div>
+                        </div>
+                        <div class="profile-skills">
+                            <h4>Your Skills</h4>
+                            <div id="skillsList" class="skills-container"></div>
+                            <button class="btn-secondary" id="editSkillsBtn">Edit Skills</button>
+                        </div>
+                        <div class="availability-toggle">
+                            <label>
+                                <input type="checkbox" id="availabilityToggle" checked>
+                                <span>Available for Calls</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Random Video Call -->
+                <div class="card video-card">
+                    <h2>Random Video Learning</h2>
+                    <p>Connect with random people based on skills and start learning together!</p>
+                    <button class="btn-primary btn-large" id="startRandomCallBtn">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                        </svg>
+                        Start Random Call
+                    </button>
+                </div>
+
+                <!-- Active Users List -->
+                <div class="card users-card">
+                    <div class="card-header">
+                        <h2>Available Users</h2>
+                        <button class="btn-refresh" id="refreshUsersBtn">
+                            <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="usersList" class="users-list">
+                        <p class="loading">Loading users...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Video Call Modal -->
+    <div class="modal" id="videoModal">
+        <div class="modal-content video-modal-content">
+            <div class="video-container">
+                <video id="remoteVideo" autoplay playsinline></video>
+                <video id="localVideo" autoplay playsinline muted></video>
+                <div class="video-info" id="videoInfo"></div>
+            </div>
+            <div class="video-controls">
+                <button class="btn-video-control" id="toggleVideoBtn" title="Toggle Video">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                    </svg>
+                </button>
+                <button class="btn-video-control" id="toggleAudioBtn" title="Toggle Audio">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                    </svg>
+                </button>
+                <button class="btn-video-control btn-skip" id="skipCallBtn" title="Skip">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M9 5v14l11-7L9 5z"></path>
+                    </svg>
+                    Skip
+                </button>
+                <button class="btn-video-control btn-end" id="endCallBtn" title="End Call">
+                    <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                    </svg>
+                    End Call
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skills Edit Modal -->
+    <div class="modal" id="skillsModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Your Skills</h2>
+                <button class="modal-close" id="closeSkillsModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Add skills you want to teach or learn (comma-separated)</p>
+                <textarea id="skillsInput" rows="4" placeholder="JavaScript, Python, React, Node.js, Machine Learning"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelSkillsBtn">Cancel</button>
+                <button class="btn-primary" id="saveSkillsBtn">Save Skills</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <script src="dashboard.js"></script>
+</body>
+</html>
