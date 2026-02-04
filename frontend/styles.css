@@ -755,13 +755,18 @@ body {
 
 .modal-content {
     position: relative;
-    background: white;
+    background: #ffffff;
     border-radius: var(--radius-xl);
-    padding: var(--spacing-xl);
+    padding: var(--spacing-2xl);
     max-width: 450px;
     width: 90%;
-    box-shadow: var(--shadow-xl);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: modalSlideIn 0.3s ease;
+}
+
+[data-theme="dark"] .modal-content {
+    background: #1a202c;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 @keyframes modalSlideIn {
@@ -777,22 +782,36 @@ body {
 
 .modal-close {
     position: absolute;
-    top: var(--spacing-sm);
-    right: var(--spacing-sm);
-    width: 32px;
-    height: 32px;
+    top: var(--spacing-md);
+    right: var(--spacing-md);
+    width: 36px;
+    height: 36px;
     border: none;
-    background: var(--color-bg);
-    color: var(--color-text-secondary);
+    background: #f7fafc;
+    color: #2d3748;
     font-size: 1.5rem;
     border-radius: var(--radius-md);
     cursor: pointer;
     transition: all var(--transition-fast);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+[data-theme="dark"] .modal-close {
+    background: #2d3748;
+    color: #e2e8f0;
 }
 
 .modal-close:hover {
     background: #e2e8f0;
-    color: var(--color-text-primary);
+    color: #1a202c;
+    transform: scale(1.1);
+}
+
+[data-theme="dark"] .modal-close:hover {
+    background: #4a5568;
+    color: #ffffff;
 }
 
 .modal-body {
