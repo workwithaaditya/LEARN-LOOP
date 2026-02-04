@@ -1,5 +1,6 @@
 import User from '../models/User.js';
 import Ping from '../models/Ping.js';
+import { Op } from 'sequelize';
 
 const connectedUsers = new Map(); // userId -> socketId
 const onlineUsers = new Set(); // Set of online userIds
@@ -35,6 +36,29 @@ export const setupSocketHandlers = (io) => {
     // Send ping/message to another user
     socket.on('user:ping', async ({ toUserId, message, fromUser }) => {
       try {
+        // Check if user already sent a ping to this person today
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        const existingPing = await Ping.findOne({
+          where: {
+            senderId: socket.userId,
+            receiverId: toUserId,
+            createdAt: {
+              [Op.gte]: twentyFourHoursAgo
+            }
+          },
+          order: [['createdAt', 'DESC']]
+        });
+
+        // If ping was sent less than 24 hours ago, reject
+        if (existingPing) {
+          const hoursRemaining = Math.ceil((existingPing.createdAt.getTime() + 24 * 60 * 60 * 1000 - Date.now()) / (60 * 60 * 1000));
+          socket.emit('ping:sent', { 
+            success: false, 
+            error: `You can ping this user again in ${hoursRemaining} hour(s)` 
+          });
+          return;
+        }
+
         // Save ping to database
         const ping = await Ping.create({
           senderId: socket.userId,

@@ -333,8 +333,6 @@ function pingUser(user) {
     message: `${currentUser.name} wants to connect with you!`,
     fromUser: currentUser
   });
-  
-  alert(`Ping sent to ${user.name}!`);
 }
 
 // Availability toggle
@@ -727,6 +725,17 @@ socket.on('ping:received', (ping) => {
   }
 });
 
+// Listen for ping sent confirmation/error
+socket.on('ping:sent', (response) => {
+  if (response.success) {
+    // Ping sent successfully
+    console.log('Ping sent successfully to user:', response.toUserId);
+  } else {
+    // Show error to user
+    alert(response.error);
+  }
+});
+
 // ============================================
 // PING FUNCTIONS
 // ============================================
@@ -742,8 +751,6 @@ async function sendPing(user) {
         avatar: currentUser.avatar
       }
     });
-    
-    showNotification(`Ping sent to ${user.name}!`);
   } catch (error) {
     console.error('Error sending ping:', error);
     showNotification('Failed to send ping');
