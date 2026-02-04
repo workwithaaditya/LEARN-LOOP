@@ -200,7 +200,7 @@ async function init() {
     loadPings();
     
     // Setup theme
-    const currentTheme = localStorage.getItem('theme') || 'light';
+    const currentTheme = localStorage.getItem('theme') || 'dark';
     document.documentElement.setAttribute('data-theme', currentTheme);
   } catch (error) {
     console.error('Initialization error:', error);
