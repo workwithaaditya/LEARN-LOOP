@@ -1,6 +1,7 @@
 import User from '../models/User.js';
 import Ping from '../models/Ping.js';
 import { Op } from 'sequelize';
+import { removeFromQueue } from '../routes/match.js';
 
 const connectedUsers = new Map(); // userId -> socketId
 const onlineUsers = new Set(); // Set of online userIds
@@ -160,6 +161,9 @@ export const setupSocketHandlers = (io) => {
       if (socket.userId) {
         connectedUsers.delete(socket.userId);
         onlineUsers.delete(socket.userId);
+        
+        // Remove from queue if waiting
+        removeFromQueue(socket.userId);
         
         // Update user status in database - mark as offline
         await User.update(

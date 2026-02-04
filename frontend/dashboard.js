@@ -434,36 +434,37 @@ startRandomCallBtn.addEventListener('click', async () => {
   videoModal.classList.add('active');
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
+  remoteLabel.textContent = 'Looking for someone to chat...';
   
   try {
-    const response = await fetch(`${API_URL}/api/match/find`, {
+    const response = await fetch(`${API_URL}/api/match/join-queue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ preferredSkills: currentUser.skills })
+      body: JSON.stringify({ socketId: socket.id })
     });
     
     const data = await response.json();
     
     if (data.match) {
+      // Found a match immediately
       currentCallUser = data.match;
       await startVideoCall(data.match);
-    } else {
-      // Keep modal open and show searching state
+    } else if (data.inQueue) {
+      // Added to queue, show waiting state
       videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'No one available. Searching...';
-      showNotification('No users available right now. Searching for someone...', 'info');
-      // Auto-retry every 5 seconds
-      setTimeout(() => {
-        if (videoModal.classList.contains('active') && !currentCallUser) {
-          startRandomCallBtn.click();
-        }
-      }, 5000);
+      remoteLabel.textContent = 'Waiting for someone to join...';
+      showNotification('Waiting in queue for someone to connect...', 'info');
+      // Listen for match from server
+      socket.once('match:found', async (matchData) => {
+        currentCallUser = matchData.match;
+        await startVideoCall(matchData.match);
+      });
     }
   } catch (error) {
-    console.error('Error finding match:', error);
+    console.error('Error joining queue:', error);
     videoModal.classList.remove('active');
-    showNotification('Failed to find a match. Please try again.', 'error');
+    showNotification('Failed to join queue. Please try again.', 'error');
   } finally {
     isSearchingMatch = false;
   }
@@ -611,38 +612,39 @@ skipCallBtn.addEventListener('click', async () => {
   // Show searching state
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
-  remoteLabel.textContent = 'Searching for next person...';
+  remoteLabel.textContent = 'Looking for next person...';
   
   isSearchingMatch = true;
   
-  // Find new match
+  // Join queue to find new match
   try {
-    const response = await fetch(`${API_URL}/api/match/find`, {
+    const response = await fetch(`${API_URL}/api/match/join-queue`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ preferredSkills: currentUser.skills })
+      body: JSON.stringify({ socketId: socket.id })
     });
     
     const data = await response.json();
     
     if (data.match) {
+      // Found a match immediately
       currentCallUser = data.match;
       await startVideoCall(data.match);
-    } else {
+    } else if (data.inQueue) {
+      // Added to queue, show waiting state
       videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'No one available. Searching...';
-      showNotification('No users available right now. Keep waiting or try again later!', 'info');
-      // Keep searching every 5 seconds
-      setTimeout(() => {
-        if (videoModal.classList.contains('active') && !currentCallUser) {
-          skipCallBtn.click();
-        }
-      }, 5000);
+      remoteLabel.textContent = 'Waiting for next person...';
+      showNotification('Waiting in queue for someone to connect...', 'info');
+      // Listen for match from server
+      socket.once('match:found', async (matchData) => {
+        currentCallUser = matchData.match;
+        await startVideoCall(matchData.match);
+      });
     }
   } catch (error) {
-    console.error('Error finding match:', error);
-    showNotification('Failed to find a match. Retrying...', 'warning');
+    console.error('Error joining queue:', error);
+    showNotification('Failed to find next person. Retrying...', 'warning');
     // Retry after 3 seconds
     setTimeout(() => {
       if (videoModal.classList.contains('active') && !currentCallUser) {
@@ -653,8 +655,26 @@ skipCallBtn.addEventListener('click', async () => {
     isSearchingMatch = false;
   }
 });
+      }
+    }, 3000);
+  } finally {
+    isSearchingMatch = false;
+  }
+});
 
-endCallBtn.addEventListener('click', endVideoCall);
+endCallBtn.addEventListener('click', async () => {
+  // Leave queue if waiting
+  try {
+    await fetch(`${API_URL}/api/match/leave-queue`, {
+      method: 'POST',
+      credentials: 'include'
+    });
+  } catch (error) {
+    console.error('Error leaving queue:', error);
+  }
+  
+  endVideoCall();
+});
 
 // Socket events
 socket.on('user:ping-received', (data) => {
