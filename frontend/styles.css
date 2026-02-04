@@ -512,17 +512,18 @@ body {
 .steps {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
+    gap: var(--spacing-lg);
     margin-top: var(--spacing-2xl);
-    max-width: 900px;
+    max-width: 1200px;
     margin-left: auto;
     margin-right: auto;
+    padding: 0 var(--spacing-md);
 }
 
 @media (min-width: 768px) {
     .steps {
         flex-direction: row;
-        align-items: center;
+        align-items: stretch;
         justify-content: center;
         gap: var(--spacing-md);
     }
@@ -530,12 +531,22 @@ body {
 
 .step {
     text-align: center;
-    padding: var(--spacing-xl) var(--spacing-lg);
+    padding: var(--spacing-xl);
     background: var(--color-surface);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-md);
-    flex: 1;
     transition: all var(--transition-base);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 150px;
+}
+
+@media (min-width: 768px) {
+    .step {
+        flex: 1;
+        min-height: 180px;
+    }
 }
 
 [data-theme="dark"] .step {
@@ -550,7 +561,7 @@ body {
 .step h3 {
     font-size: var(--font-size-lg);
     font-weight: 700;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-sm);
     color: var(--color-text-primary);
     background: var(--gradient-text);
     -webkit-background-clip: text;
@@ -562,6 +573,7 @@ body {
     color: var(--color-text-secondary);
     font-size: var(--font-size-sm);
     line-height: 1.6;
+    margin: 0;
 }
 
 .step-arrow {
@@ -570,6 +582,7 @@ body {
     text-align: center;
     display: none;
     flex-shrink: 0;
+    align-self: center;
 }
 
 @media (min-width: 768px) {
