@@ -2,6 +2,21 @@
 const API_URL = 'https://learn-loop-production.up.railway.app'; // Replace with actual Railway URL
 const socket = io(API_URL, { withCredentials: true });
 
+// Helper function to get auth headers
+function getAuthHeaders() {
+  const headers = {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json'
+  };
+  
+  const authToken = localStorage.getItem('authToken');
+  if (authToken) {
+    headers['Authorization'] = `Bearer ${authToken}`;
+  }
+  
+  return headers;
+}
+
 let currentUser = null;
 let localStream = null;
 let remoteStream = null;
@@ -119,30 +134,42 @@ let unreadPingsCount = 0;
 // Initialize
 async function init() {
   try {
-    // Check if redirected from OAuth with session ID
+    // Check if redirected from OAuth with JWT token
     const urlParams = new URLSearchParams(window.location.search);
-    const sessionId = urlParams.get('sid');
+    const token = urlParams.get('token');
     
-    if (sessionId) {
-      console.log('OAuth redirect detected with session ID');
-      // Store session ID in localStorage as fallback
-      localStorage.setItem('sessionId', sessionId);
+    if (token) {
+      console.log('OAuth redirect detected with JWT token');
+      // Store JWT token in localStorage
+      localStorage.setItem('authToken', token);
       // Clean URL
       window.history.replaceState({}, document.title, '/dashboard.html');
     }
     
+    // Get stored token
+    const authToken = localStorage.getItem('authToken');
+    
     // Check authentication
     console.log('Checking authentication...');
+    const headers = {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    };
+    
+    // Add JWT token to Authorization header if available
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+      console.log('Using JWT token for authentication');
+    }
+    
     const authCheck = await fetch(`${API_URL}/auth/current-user`, {
       credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
+      headers: headers
     });
     
     if (!authCheck.ok) {
       console.error('Auth check failed with status:', authCheck.status);
+      localStorage.removeItem('authToken');
       window.location.href = '/index.html';
       return;
     }
@@ -152,7 +179,7 @@ async function init() {
     
     if (!authData.authenticated) {
       console.log('Not authenticated, redirecting to login');
-      localStorage.removeItem('sessionId'); // Clear stored session
+      localStorage.removeItem('authToken');
       window.location.href = '/index.html';
       return;
     }
@@ -1258,8 +1285,11 @@ markAllReadBtn.addEventListener('click', markAllPingsRead);
 logoutBtn.addEventListener('click', async () => {
   try {
     await fetch(`${API_URL}/auth/logout`, {
-      credentials: 'include'
+      credentials: 'include',
+      headers: getAuthHeaders()
     });
+    // Clear JWT token
+    localStorage.removeItem('authToken');
     window.location.href = '/index.html';
   } catch (error) {
     console.error('Logout error:', error);

@@ -1,5 +1,6 @@
 import express from 'express';
 import passport from 'passport';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
 
@@ -39,8 +40,15 @@ router.get('/google/callback',
       console.log('Session after save:', req.session);
       console.log('Session ID:', req.sessionID);
       
-      // Redirect with session ID in URL as backup
-      const redirectUrl = `${process.env.FRONTEND_URL}/dashboard.html?sid=${req.sessionID}`;
+      // Generate JWT token for cross-origin auth
+      const token = jwt.sign(
+        { userId: req.user.id },
+        process.env.SESSION_SECRET,
+        { expiresIn: '7d' }
+      );
+      
+      // Redirect with JWT token in URL
+      const redirectUrl = `${process.env.FRONTEND_URL}/dashboard.html?token=${token}`;
       res.redirect(redirectUrl);
     });
   }
@@ -64,12 +72,13 @@ router.get('/current-user', async (req, res) => {
   console.log('=== Auth Check ===');
   console.log('Session ID:', req.sessionID);
   console.log('Session Cookie:', req.headers.cookie);
+  console.log('Authorization Header:', req.headers.authorization);
   console.log('Is Authenticated:', req.isAuthenticated());
   console.log('Session User:', req.session?.passport?.user);
   console.log('Req User:', req.user);
   console.log('Origin:', req.headers.origin);
   
-  // Check if authenticated via Passport
+  // Check if authenticated via Passport (session-based)
   if (req.isAuthenticated() && req.user) {
     return res.json({
       authenticated: true,
@@ -83,6 +92,38 @@ router.get('/current-user', async (req, res) => {
         isAvailable: req.user.isAvailable
       }
     });
+  }
+  
+  // Fallback: Check JWT token in Authorization header
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    console.log('🔑 JWT token found, verifying...');
+    
+    try {
+      const decoded = jwt.verify(token, process.env.SESSION_SECRET);
+      console.log('✅ JWT verified, userId:', decoded.userId);
+      
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findByPk(decoded.userId);
+      
+      if (user) {
+        return res.json({
+          authenticated: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            skills: user.skills,
+            bio: user.bio,
+            isAvailable: user.isAvailable
+          }
+        });
+      }
+    } catch (error) {
+      console.error('❌ JWT verification failed:', error.message);
+    }
   }
   
   // Fallback: Check if userId stored in session (for cookie issues)
