@@ -2,6 +2,7 @@
 .dashboard-container {
     min-height: calc(100vh - 80px);
     padding: var(--spacing-2xl) 0;
+    background: var(--color-background);
 }
 
 .dashboard-header {
@@ -17,6 +18,12 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+}
+
+.dashboard-header p {
+    font-size: var(--font-size-lg);
+    color: var(--color-text-secondary);
+    margin-top: var(--spacing-xs);
 }
 
 .dashboard-grid {
