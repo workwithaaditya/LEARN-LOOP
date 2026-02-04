@@ -90,6 +90,31 @@ app.use('/api/match', matchRoutes);
 app.use('/api/ping', pingRoutes);
 app.use('/api/friends', friendsRoutes);
 
+// ICE servers endpoint for WebRTC (STUN + TURN)
+app.get('/api/ice', async (req, res) => {
+  try {
+    const meteredApiKey = process.env.METERED_API_KEY || 'af10e31f617aa49eb4024c3e52fcfae6eaa6';
+    
+    // Fetch TURN credentials from Metered
+    const response = await fetch(
+      `https://learnloop.metered.live/api/v1/turn/credentials?apiKey=${meteredApiKey}`
+    );
+    
+    const iceServers = await response.json();
+    
+    res.json({ iceServers });
+  } catch (error) {
+    console.error('Error fetching ICE servers:', error);
+    // Fallback to basic STUN if Metered API fails
+    res.json({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' }
+      ]
+    });
+  }
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ 

@@ -25,12 +25,25 @@ function getRandomQuote() {
   return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
 }
 
-const config = {
+// ICE configuration will be fetched dynamically
+let iceServersConfig = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' }
   ]
 };
+
+// Fetch ICE servers from backend
+async function fetchIceServers() {
+  try {
+    const response = await fetch(`${API_URL}/api/ice`, { credentials: 'include' });
+    const data = await response.json();
+    iceServersConfig = data;
+    console.log('ICE servers loaded:', iceServersConfig);
+  } catch (error) {
+    console.error('Failed to fetch ICE servers, using STUN only:', error);
+  }
+}
 
 // DOM Elements
 const userAvatar = document.getElementById('userAvatar');
@@ -107,6 +120,9 @@ async function init() {
   
   currentUser = authData.user;
   displayUserInfo();
+  
+  // Fetch ICE servers (STUN + TURN)
+  await fetchIceServers();
   
   // Join socket room
   socket.emit('user:join', { userId: currentUser.id });
@@ -420,7 +436,7 @@ async function startVideoCall(user) {
     motivationalQuote.textContent = `Connecting with ${user.name}...`;
     
     // Create peer connection
-    peerConnection = new RTCPeerConnection(config);
+    peerConnection = new RTCPeerConnection(iceServersConfig);
     
     // Add local stream tracks
     localStream.getTracks().forEach(track => {
@@ -609,7 +625,7 @@ socket.on('call:incoming', async (data) => {
       motivationalQuote.textContent = `Connecting with ${data.from.name}...`;
       videoInfo.classList.remove('hidden');
       
-      peerConnection = new RTCPeerConnection(config);
+      peerConnection = new RTCPeerConnection(iceServersConfig);
       
       localStream.getTracks().forEach(track => {
         peerConnection.addTrack(track, localStream);
