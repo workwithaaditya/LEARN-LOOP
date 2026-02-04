@@ -639,7 +639,7 @@
     background: transparent;
     border: none;
     color: var(--color-text);
-    font-size: 1.25rem;
+    font-size: 1.35rem;
     cursor: pointer;
     padding: 0.5rem;
     border-radius: var(--radius-md);
@@ -649,23 +649,48 @@
 .btn-icon:hover {
     background: rgba(220, 38, 38, 0.1);
     color: var(--color-primary);
+    transform: scale(1.1);
+}
+
+.btn-icon i {
+    display: block;
+}
+
+[data-theme="dark"] .btn-icon:hover {
+    background: rgba(220, 38, 38, 0.2);
 }
 
 .notification-badge {
     position: absolute;
-    top: 0;
-    right: 0;
-    background: var(--color-primary);
+    top: -4px;
+    right: -4px;
+    background: #ef4444;
     color: white;
     font-size: 0.7rem;
-    font-weight: 600;
-    min-width: 18px;
-    height: 18px;
+    font-weight: 700;
+    min-width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0 4px;
+    padding: 0 5px;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+    border: 2px solid white;
+    animation: badgePulse 2s ease-in-out infinite;
+}
+
+[data-theme="dark"] .notification-badge {
+    border-color: #1a202c;
+}
+
+@keyframes badgePulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
 }
 
 /* Pings Container */
