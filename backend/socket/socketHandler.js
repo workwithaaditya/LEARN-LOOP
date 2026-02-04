@@ -1,6 +1,8 @@
 import User from '../models/User.js';
+import Ping from '../models/Ping.js';
 
 const connectedUsers = new Map(); // userId -> socketId
+const onlineUsers = new Set(); // Set of online userIds
 const activeCalls = new Map(); // roomId -> [user1Id, user2Id]
 
 export const setupSocketHandlers = (io) => {
@@ -11,17 +13,19 @@ export const setupSocketHandlers = (io) => {
     socket.on('user:join', async ({ userId }) => {
       try {
         connectedUsers.set(userId, socket.id);
+        onlineUsers.add(userId);
         socket.userId = userId;
 
-        // Update user's socket ID in database
+        // Update user's online status in database
         await User.update(
-          { socketId: socket.id },
+          { socketId: socket.id, isAvailable: true },
           { where: { id: userId } }
         );
 
-        console.log(`👤 User ${userId} joined with socket ${socket.id}`);
+        console.log(`👤 User ${userId} joined and is now online`);
         
-        // Broadcast updated user list to all clients
+        // Broadcast user came online
+        io.emit('user:status-change', { userId, isOnline: true });
         io.emit('users:updated');
       } catch (error) {
         console.error('Error in user:join:', error);
@@ -29,15 +33,33 @@ export const setupSocketHandlers = (io) => {
     });
 
     // Send ping/message to another user
-    socket.on('user:ping', ({ toUserId, message, fromUser }) => {
-      const recipientSocketId = connectedUsers.get(toUserId);
-      
-      if (recipientSocketId) {
-        io.to(recipientSocketId).emit('user:ping-received', {
-          from: fromUser,
-          message: message || 'wants to connect with you!',
-          timestamp: new Date().toISOString()
+    socket.on('user:ping', async ({ toUserId, message, fromUser }) => {
+      try {
+        // Save ping to database
+        const ping = await Ping.create({
+          senderId: socket.userId,
+          receiverId: toUserId,
+          message: message || 'wants to connect with you!'
         });
+
+        const recipientSocketId = connectedUsers.get(toUserId);
+        
+        // If user is online, send real-time notification
+        if (recipientSocketId) {
+          io.to(recipientSocketId).emit('ping:received', {
+            id: ping.id,
+            from: fromUser,
+            message: ping.message,
+            timestamp: ping.createdAt,
+            isRead: false
+          });
+        }
+        
+        // Confirm to sender
+        socket.emit('ping:sent', { success: true, toUserId });
+      } catch (error) {
+        console.error('Error sending ping:', error);
+        socket.emit('ping:sent', { success: false, error: error.message });
       }
     });
 
@@ -102,15 +124,22 @@ export const setupSocketHandlers = (io) => {
       
       if (socket.userId) {
         connectedUsers.delete(socket.userId);
+        onlineUsers.delete(socket.userId);
         
-        // Update user status in database
+        // Update user status in database - mark as offline
         await User.update(
-          { socketId: null, inCall: false },
+          { socketId: null, isAvailable: false, inCall: false },
           { where: { id: socket.userId } }
         );
 
+        // Broadcast user went offline
+        io.emit('user:status-change', { userId: socket.userId, isOnline: false });
         io.emit('users:updated');
       }
     });
   });
+
+  // Export helper functions
+  io.isUserOnline = (userId) => onlineUsers.has(userId);
+  io.getOnlineUsersCount = () => onlineUsers.size;
 };

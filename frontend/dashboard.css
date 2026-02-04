@@ -452,3 +452,129 @@
     font-weight: 500;
     font-size: var(--font-size-sm);
 }
+
+/* Online Status Indicator */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    border: 2px solid var(--color-bg);
+}
+
+.status-online {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.5);
+}
+
+.status-offline {
+    background-color: #94a3b8;
+}
+
+.user-item-left {
+    position: relative;
+}
+
+.user-item img {
+    position: relative;
+}
+
+/* Notification Badge */
+.btn-icon {
+    position: relative;
+    background: transparent;
+    border: none;
+    color: var(--color-text);
+    font-size: 1.25rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: var(--radius-md);
+    transition: all var(--transition-base);
+}
+
+.btn-icon:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--color-primary);
+}
+
+.notification-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--color-primary);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+}
+
+/* Pings Container */
+#pingsContainer {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.ping-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-lg);
+    background: rgba(0, 0, 0, 0.02);
+    margin-bottom: var(--spacing-sm);
+    transition: all var(--transition-base);
+    cursor: pointer;
+}
+
+[data-theme="dark"] .ping-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.ping-item:hover {
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.ping-item.unread {
+    background: rgba(220, 38, 38, 0.1);
+    border-left: 3px solid var(--color-primary);
+}
+
+.ping-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+}
+
+.ping-info {
+    flex: 1;
+}
+
+.ping-info h5 {
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.ping-info p {
+    font-size: var(--font-size-sm);
+    opacity: 0.7;
+}
+
+.ping-time {
+    font-size: 0.75rem;
+    opacity: 0.6;
+}
+
+.no-pings {
+    text-align: center;
+    padding: var(--spacing-xl);
+    opacity: 0.6;
+}

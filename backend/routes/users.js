@@ -6,17 +6,28 @@ import { Op } from 'sequelize';
 const router = express.Router();
 
 // @route   GET /api/users
-// @desc    Get all available users
+// @desc    Get all available users (with optional online filter)
 router.get('/', isAuthenticated, async (req, res) => {
   try {
+    const { onlineOnly } = req.query;
+    
+    const whereClause = { 
+      id: { [Op.ne]: req.user.id }
+    };
+    
+    // Filter by online users only if requested
+    if (onlineOnly === 'true') {
+      whereClause.isAvailable = true;
+    }
+
     const users = await User.findAll({ 
-      where: { 
-        id: { [Op.ne]: req.user.id },
-        isAvailable: true 
-      },
+      where: whereClause,
       attributes: ['id', 'name', 'email', 'avatar', 'skills', 'bio', 'isAvailable', 'inCall'],
-      order: [['lastLogin', 'DESC']],
-      limit: 50
+      order: [
+        ['isAvailable', 'DESC'], // Online users first
+        ['lastLogin', 'DESC']
+      ],
+      limit: 100
     });
 
     res.json({ users });

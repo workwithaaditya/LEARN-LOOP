@@ -29,6 +29,15 @@ const startRandomCallBtn = document.getElementById('startRandomCallBtn');
 const refreshUsersBtn = document.getElementById('refreshUsersBtn');
 const themeToggle = document.getElementById('themeToggle');
 
+// Ping/Notification elements
+const pingsNotifBtn = document.getElementById('pingsNotifBtn');
+const pingsBadge = document.getElementById('pingsBadge');
+const pingsModal = document.getElementById('pingsModal');
+const closePingsModal = document.getElementById('closePingsModal');
+const closePingsBtn = document.getElementById('closePingsBtn');
+const markAllReadBtn = document.getElementById('markAllReadBtn');
+const pingsContainer = document.getElementById('pingsContainer');
+
 // Modal elements
 const skillsModal = document.getElementById('skillsModal');
 const videoModal = document.getElementById('videoModal');
@@ -45,6 +54,8 @@ const toggleVideoBtn = document.getElementById('toggleVideoBtn');
 const toggleAudioBtn = document.getElementById('toggleAudioBtn');
 const skipCallBtn = document.getElementById('skipCallBtn');
 const endCallBtn = document.getElementById('endCallBtn');
+
+let unreadPingsCount = 0;
 
 // Initialize
 async function init() {
@@ -66,8 +77,9 @@ async function init() {
   // Join socket room
   socket.emit('user:join', { userId: currentUser.id });
   
-  // Load users
+  // Load users and pings
   loadUsers();
+  loadPings();
   
   // Setup theme
   const currentTheme = localStorage.getItem('theme') || 'light';
@@ -132,9 +144,18 @@ function displayUsers(users) {
     const userLeft = document.createElement('div');
     userLeft.className = 'user-item-left';
     
+    const userImgContainer = document.createElement('div');
+    userImgContainer.style.position = 'relative';
+    
     const userImg = document.createElement('img');
     userImg.src = user.avatar;
     userImg.alt = user.name;
+    
+    // Add online status indicator
+    const statusDot = document.createElement('div');
+    statusDot.className = `status-indicator ${user.isAvailable ? 'status-online' : 'status-offline'}`;
+    userImgContainer.appendChild(userImg);
+    userImgContainer.appendChild(statusDot);
     
     const userInfo = document.createElement('div');
     userInfo.className = 'user-item-info';
@@ -157,17 +178,23 @@ function displayUsers(users) {
     userInfo.appendChild(userName);
     userInfo.appendChild(userSkills);
     
-    userLeft.appendChild(userImg);
+    userLeft.appendChild(userImgContainer);
     userLeft.appendChild(userInfo);
     
-    const pingBtn = document.createElement('button');
-    pingBtn.className = 'btn-ping';
-    pingBtn.textContent = user.inCall ? 'In Call' : 'Ping';
-    pingBtn.disabled = user.inCall;
-    pingBtn.onclick = () => pingUser(user);
+    // Show different button based on online status
+    const actionBtn = document.createElement('button');
+    if (user.isAvailable && !user.inCall) {
+      actionBtn.className = 'btn-primary btn-sm';
+      actionBtn.textContent = '📞 Call';
+      actionBtn.onclick = () => initiateCall(user);
+    } else {
+      actionBtn.className = 'btn-secondary btn-sm';
+      actionBtn.textContent = '📬 Ping';
+      actionBtn.onclick = () => sendPing(user);
+    }
     
     userItem.appendChild(userLeft);
-    userItem.appendChild(pingBtn);
+    userItem.appendChild(actionBtn);
     
     usersList.appendChild(userItem);
   });
@@ -418,6 +445,194 @@ socket.on('call:ice-candidate', async (data) => {
 socket.on('call:ended', () => {
   endVideoCall();
 });
+
+// Listen for user status changes
+socket.on('user:status-change', ({ userId, isOnline }) => {
+  loadUsers(); // Refresh user list to show updated status
+});
+
+// Listen for incoming pings
+socket.on('ping:received', (ping) => {
+  unreadPingsCount++;
+  updatePingsBadge();
+  
+  // Show notification
+  showNotification(`${ping.from.name} ${ping.message}`);
+  
+  // Reload pings if modal is open
+  if (pingsModal.style.display === 'flex') {
+    loadPings();
+  }
+});
+
+// ============================================
+// PING FUNCTIONS
+// ============================================
+
+async function sendPing(user) {
+  try {
+    socket.emit('user:ping', {
+      toUserId: user.id,
+      message: `wants to connect with you!`,
+      fromUser: {
+        id: currentUser.id,
+        name: currentUser.name,
+        avatar: currentUser.avatar
+      }
+    });
+    
+    showNotification(`Ping sent to ${user.name}!`);
+  } catch (error) {
+    console.error('Error sending ping:', error);
+    showNotification('Failed to send ping');
+  }
+}
+
+async function loadPings() {
+  try {
+    const response = await fetch(`${API_URL}/api/ping/received`, {
+      credentials: 'include'
+    });
+    
+    const data = await response.json();
+    
+    unreadPingsCount = data.unreadCount;
+    updatePingsBadge();
+    displayPings(data.pings);
+  } catch (error) {
+    console.error('Error loading pings:', error);
+    pingsContainer.innerHTML = '<p class="no-pings">Failed to load notifications</p>';
+  }
+}
+
+function displayPings(pings) {
+  if (!pings || pings.length === 0) {
+    pingsContainer.innerHTML = '<p class="no-pings">No notifications yet</p>';
+    return;
+  }
+  
+  pingsContainer.innerHTML = '';
+  
+  pings.forEach(ping => {
+    const pingItem = document.createElement('div');
+    pingItem.className = `ping-item ${!ping.isRead ? 'unread' : ''}`;
+    pingItem.onclick = () => markPingAsRead(ping.id);
+    
+    const avatar = document.createElement('img');
+    avatar.src = ping.sender.avatar;
+    avatar.alt = ping.sender.name;
+    avatar.className = 'ping-avatar';
+    
+    const pingInfo = document.createElement('div');
+    pingInfo.className = 'ping-info';
+    
+    const senderName = document.createElement('h5');
+    senderName.textContent = ping.sender.name;
+    
+    const message = document.createElement('p');
+    message.textContent = ping.message;
+    
+    const timeAgo = document.createElement('span');
+    timeAgo.className = 'ping-time';
+    timeAgo.textContent = formatTimeAgo(new Date(ping.createdAt));
+    
+    pingInfo.appendChild(senderName);
+    pingInfo.appendChild(message);
+    
+    pingItem.appendChild(avatar);
+    pingItem.appendChild(pingInfo);
+    pingItem.appendChild(timeAgo);
+    
+    pingsContainer.appendChild(pingItem);
+  });
+}
+
+async function markPingAsRead(pingId) {
+  try {
+    await fetch(`${API_URL}/api/ping/${pingId}/read`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    loadPings();
+  } catch (error) {
+    console.error('Error marking ping as read:', error);
+  }
+}
+
+async function markAllPingsRead() {
+  try {
+    await fetch(`${API_URL}/api/ping/mark-all-read`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    loadPings();
+  } catch (error) {
+    console.error('Error marking all pings as read:', error);
+  }
+}
+
+function updatePingsBadge() {
+  if (unreadPingsCount > 0) {
+    pingsBadge.textContent = unreadPingsCount;
+    pingsBadge.style.display = 'flex';
+  } else {
+    pingsBadge.style.display = 'none';
+  }
+}
+
+function formatTimeAgo(date) {
+  const seconds = Math.floor((new Date() - date) / 1000);
+  
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function showNotification(message) {
+  // Simple toast notification
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--color-primary);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Pings modal handlers
+pingsNotifBtn.addEventListener('click', () => {
+  pingsModal.style.display = 'flex';
+  loadPings();
+});
+
+closePingsModal.addEventListener('click', () => {
+  pingsModal.style.display = 'none';
+});
+
+closePingsBtn.addEventListener('click', () => {
+  pingsModal.style.display = 'none';
+});
+
+markAllReadBtn.addEventListener('click', markAllPingsRead);
 
 // Theme toggle
 themeToggle.addEventListener('click', () => {

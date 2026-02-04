@@ -9,11 +9,13 @@ import { Server } from 'socket.io';
 // Import database
 import sequelize from './config/database.js';
 import User from './models/User.js';
+import Ping from './models/Ping.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import matchRoutes from './routes/match.js';
+import pingRoutes from './routes/ping.js';
 
 // Import socket handler
 import { setupSocketHandlers } from './socket/socketHandler.js';
@@ -82,6 +84,7 @@ sequelize.authenticate()
 app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/match', matchRoutes);
+app.use('/api/ping', pingRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {
