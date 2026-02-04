@@ -1026,6 +1026,19 @@ function showNotification(message, type = 'info') {
 
 // Message Box Functions
 function addMessageToBox(message, type = 'info') {
+  // Only store friend requests and ping notifications
+  const allowedMessages = [
+    'friend request',
+    'ping',
+    'wants to connect',
+    'accepted',
+    'rejected'
+  ];
+  
+  const shouldStore = allowedMessages.some(keyword => message.toLowerCase().includes(keyword));
+  
+  if (!shouldStore) return; // Skip all other messages
+  
   const messageObj = {
     id: Date.now(),
     message,
