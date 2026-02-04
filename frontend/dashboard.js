@@ -449,8 +449,16 @@ startRandomCallBtn.addEventListener('click', async () => {
       currentCallUser = data.match;
       await startVideoCall(data.match);
     } else {
-      videoModal.classList.remove('active');
-      showNotification('No users available for matching right now. Try again later!', 'info');
+      // Keep modal open and show searching state
+      videoInfo.classList.remove('hidden');
+      remoteLabel.textContent = 'No one available. Searching...';
+      showNotification('No users available right now. Searching for someone...', 'info');
+      // Auto-retry every 5 seconds
+      setTimeout(() => {
+        if (videoModal.classList.contains('active') && !currentCallUser) {
+          startRandomCallBtn.click();
+        }
+      }, 5000);
     }
   } catch (error) {
     console.error('Error finding match:', error);
@@ -536,26 +544,35 @@ async function startVideoCall(user) {
   }
 }
 
-function endVideoCall() {
+function cleanupCurrentCall() {
+  // Stop local tracks
   if (localStream) {
     localStream.getTracks().forEach(track => track.stop());
+    localStream = null;
   }
   
+  // Close peer connection
   if (peerConnection) {
     peerConnection.close();
+    peerConnection = null;
   }
   
+  // Notify other user
   if (currentCallUser) {
     socket.emit('call:end', { otherUserId: currentCallUser.id });
+    currentCallUser = null;
   }
   
-  localStream = null;
-  peerConnection = null;
-  currentCallUser = null;
-  
-  videoModal.classList.remove('active');
+  // Clear video streams
   localVideo.srcObject = null;
   remoteVideo.srcObject = null;
+}
+
+function endVideoCall() {
+  cleanupCurrentCall();
+  
+  // Close the modal
+  videoModal.classList.remove('active');
 }
 
 // Video controls
@@ -588,24 +605,14 @@ toggleAudioBtn.addEventListener('click', () => {
 skipCallBtn.addEventListener('click', async () => {
   if (isSearchingMatch) return; // Prevent multiple clicks
   
-  // Close current call connection but keep modal open
-  if (peerConnection) {
-    peerConnection.close();
-  }
-  if (currentCallUser) {
-    socket.emit('call:end', { otherUserId: currentCallUser.id });
-  }
+  // Cleanup current connection
+  cleanupCurrentCall();
   
-  // Reset video streams
-  remoteVideo.srcObject = null;
-  
-  // Show quote while searching
+  // Show searching state
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
-  remoteLabel.textContent = 'Searching...';
+  remoteLabel.textContent = 'Searching for next person...';
   
-  currentCallUser = null;
-  peerConnection = null;
   isSearchingMatch = true;
   
   // Find new match
@@ -623,13 +630,25 @@ skipCallBtn.addEventListener('click', async () => {
       currentCallUser = data.match;
       await startVideoCall(data.match);
     } else {
-      endVideoCall();
-      showNotification('No users available for matching right now. Try again later!', 'info');
+      videoInfo.classList.remove('hidden');
+      remoteLabel.textContent = 'No one available. Searching...';
+      showNotification('No users available right now. Keep waiting or try again later!', 'info');
+      // Keep searching every 5 seconds
+      setTimeout(() => {
+        if (videoModal.classList.contains('active') && !currentCallUser) {
+          skipCallBtn.click();
+        }
+      }, 5000);
     }
   } catch (error) {
     console.error('Error finding match:', error);
-    endVideoCall();
-    showNotification('Failed to find a match. Please try again.', 'error');
+    showNotification('Failed to find a match. Retrying...', 'warning');
+    // Retry after 3 seconds
+    setTimeout(() => {
+      if (videoModal.classList.contains('active') && !currentCallUser) {
+        skipCallBtn.click();
+      }
+    }, 3000);
   } finally {
     isSearchingMatch = false;
   }
@@ -744,7 +763,9 @@ socket.on('call:ice-candidate', async (data) => {
 });
 
 socket.on('call:ended', () => {
-  endVideoCall();
+  showNotification('Call ended. Searching for next person...', 'info');
+  // Automatically search for next person
+  skipCallBtn.click();
 });
 
 // Listen for user status changes
