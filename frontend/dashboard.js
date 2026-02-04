@@ -8,6 +8,22 @@ let remoteStream = null;
 let peerConnection = null;
 let currentCallUser = null;
 let allUsers = []; // Store all users for filtering
+let isSearchingMatch = false;
+
+const motivationalQuotes = [
+  "You should be a learner always",
+  "Every expert was once a beginner",
+  "Learning is a journey, not a destination",
+  "Knowledge grows when shared",
+  "The best way to learn is to teach",
+  "Stay curious, stay learning",
+  "Connect, learn, grow together",
+  "Your next mentor is just a call away"
+];
+
+function getRandomQuote() {
+  return motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
+}
 
 const config = {
   iceServers: [
@@ -66,6 +82,8 @@ const videoModal = document.getElementById('videoModal');
 const localVideo = document.getElementById('localVideo');
 const remoteVideo = document.getElementById('remoteVideo');
 const videoInfo = document.getElementById('videoInfo');
+const remoteLabel = document.getElementById('remoteLabel');
+const motivationalQuote = document.getElementById('motivationalQuote');
 const toggleVideoBtn = document.getElementById('toggleVideoBtn');
 const toggleAudioBtn = document.getElementById('toggleAudioBtn');
 const skipCallBtn = document.getElementById('skipCallBtn');
@@ -355,6 +373,13 @@ closeSelfProfBtn.addEventListener('click', () => {
 
 // Random video call
 startRandomCallBtn.addEventListener('click', async () => {
+  if (isSearchingMatch) return; // Prevent multiple clicks
+  
+  isSearchingMatch = true;
+  videoModal.classList.add('active');
+  motivationalQuote.textContent = getRandomQuote();
+  videoInfo.classList.remove('hidden');
+  
   try {
     const response = await fetch(`${API_URL}/api/match/find`, {
       method: 'POST',
@@ -369,17 +394,22 @@ startRandomCallBtn.addEventListener('click', async () => {
       currentCallUser = data.match;
       await startVideoCall(data.match);
     } else {
+      videoModal.classList.remove('active');
       alert('No users available for matching right now. Try again later!');
     }
   } catch (error) {
     console.error('Error finding match:', error);
+    videoModal.classList.remove('active');
     alert('Failed to find a match. Please try again.');
+  } finally {
+    isSearchingMatch = false;
   }
 });
 
 async function startVideoCall(user) {
   try {
     currentCallUser = user;
+    remoteLabel.textContent = user.name;
     
     localStream = await navigator.mediaDevices.getUserMedia({ 
       video: true, 
@@ -387,8 +417,7 @@ async function startVideoCall(user) {
     });
     
     localVideo.srcObject = localStream;
-    videoModal.classList.add('active');
-    videoInfo.textContent = `Connecting with ${user.name}...`;
+    motivationalQuote.textContent = `Connecting with ${user.name}...`;
     
     // Create peer connection
     peerConnection = new RTCPeerConnection(config);
@@ -401,7 +430,7 @@ async function startVideoCall(user) {
     // Handle incoming tracks
     peerConnection.ontrack = (event) => {
       remoteVideo.srcObject = event.streams[0];
-      videoInfo.textContent = `Connected with ${user.name}`;
+      videoInfo.classList.add('hidden'); // Hide quote when connected
     };
     
     // Handle ICE candidates
@@ -418,11 +447,13 @@ async function startVideoCall(user) {
     peerConnection.onconnectionstatechange = () => {
       console.log('Connection state:', peerConnection.connectionState);
       if (peerConnection.connectionState === 'connected') {
-        videoInfo.textContent = `Connected with ${user.name}`;
+        videoInfo.classList.add('hidden');
       } else if (peerConnection.connectionState === 'disconnected') {
-        videoInfo.textContent = 'Connection lost...';
+        motivationalQuote.textContent = 'Connection lost...';
+        videoInfo.classList.remove('hidden');
       } else if (peerConnection.connectionState === 'failed') {
-        videoInfo.textContent = 'Connection failed. Please try again.';
+        motivationalQuote.textContent = 'Connection failed. Please try again.';
+        videoInfo.classList.remove('hidden');
         setTimeout(endVideoCall, 3000);
       }
     };
@@ -499,9 +530,54 @@ toggleAudioBtn.addEventListener('click', () => {
   }
 });
 
-skipCallBtn.addEventListener('click', () => {
-  endVideoCall();
-  startRandomCallBtn.click(); // Find new match
+skipCallBtn.addEventListener('click', async () => {
+  if (isSearchingMatch) return; // Prevent multiple clicks
+  
+  // Close current call connection but keep modal open
+  if (peerConnection) {
+    peerConnection.close();
+  }
+  if (currentCallUser) {
+    socket.emit('call:end', { otherUserId: currentCallUser.id });
+  }
+  
+  // Reset video streams
+  remoteVideo.srcObject = null;
+  
+  // Show quote while searching
+  motivationalQuote.textContent = getRandomQuote();
+  videoInfo.classList.remove('hidden');
+  remoteLabel.textContent = 'Searching...';
+  
+  currentCallUser = null;
+  peerConnection = null;
+  isSearchingMatch = true;
+  
+  // Find new match
+  try {
+    const response = await fetch(`${API_URL}/api/match/find`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ preferredSkills: currentUser.skills })
+    });
+    
+    const data = await response.json();
+    
+    if (data.match) {
+      currentCallUser = data.match;
+      await startVideoCall(data.match);
+    } else {
+      endVideoCall();
+      alert('No users available for matching right now. Try again later!');
+    }
+  } catch (error) {
+    console.error('Error finding match:', error);
+    endVideoCall();
+    alert('Failed to find a match. Please try again.');
+  } finally {
+    isSearchingMatch = false;
+  }
 });
 
 endCallBtn.addEventListener('click', endVideoCall);
@@ -521,6 +597,7 @@ socket.on('call:incoming', async (data) => {
     
     if (accept) {
       currentCallUser = data.from;
+      remoteLabel.textContent = data.from.name;
       
       localStream = await navigator.mediaDevices.getUserMedia({ 
         video: true, 
@@ -529,7 +606,8 @@ socket.on('call:incoming', async (data) => {
       
       localVideo.srcObject = localStream;
       videoModal.classList.add('active');
-      videoInfo.textContent = `Connecting with ${data.from.name}...`;
+      motivationalQuote.textContent = `Connecting with ${data.from.name}...`;
+      videoInfo.classList.remove('hidden');
       
       peerConnection = new RTCPeerConnection(config);
       
@@ -539,7 +617,7 @@ socket.on('call:incoming', async (data) => {
       
       peerConnection.ontrack = (event) => {
         remoteVideo.srcObject = event.streams[0];
-        videoInfo.textContent = `Connected with ${data.from.name}`;
+        videoInfo.classList.add('hidden');
       };
       
       peerConnection.onicecandidate = (event) => {
