@@ -119,6 +119,18 @@ let unreadPingsCount = 0;
 // Initialize
 async function init() {
   try {
+    // Check if redirected from OAuth with session ID
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('sid');
+    
+    if (sessionId) {
+      console.log('OAuth redirect detected with session ID');
+      // Store session ID in localStorage as fallback
+      localStorage.setItem('sessionId', sessionId);
+      // Clean URL
+      window.history.replaceState({}, document.title, '/dashboard.html');
+    }
+    
     // Check authentication
     console.log('Checking authentication...');
     const authCheck = await fetch(`${API_URL}/auth/current-user`, {
@@ -140,6 +152,7 @@ async function init() {
     
     if (!authData.authenticated) {
       console.log('Not authenticated, redirecting to login');
+      localStorage.removeItem('sessionId'); // Clear stored session
       window.location.href = '/index.html';
       return;
     }

@@ -28,6 +28,8 @@ router.get('/google/callback',
     
     // Successful authentication
     req.session.justAuthenticated = true;
+    req.session.userId = req.user.id; // Store user ID directly in session
+    
     req.session.save((err) => {
       if (err) {
         console.error('❌ Session save error:', err);
@@ -37,8 +39,9 @@ router.get('/google/callback',
       console.log('Session after save:', req.session);
       console.log('Session ID:', req.sessionID);
       
-      // Redirect to frontend dashboard
-      res.redirect(`${process.env.FRONTEND_URL}/dashboard.html`);
+      // Redirect with session ID in URL as backup
+      const redirectUrl = `${process.env.FRONTEND_URL}/dashboard.html?sid=${req.sessionID}`;
+      res.redirect(redirectUrl);
     });
   }
 );
@@ -56,7 +59,7 @@ router.get('/logout', (req, res) => {
 
 // @route   GET /auth/current-user
 // @desc    Get current logged in user
-router.get('/current-user', (req, res) => {
+router.get('/current-user', async (req, res) => {
   // Debug logging
   console.log('=== Auth Check ===');
   console.log('Session ID:', req.sessionID);
@@ -66,8 +69,9 @@ router.get('/current-user', (req, res) => {
   console.log('Req User:', req.user);
   console.log('Origin:', req.headers.origin);
   
+  // Check if authenticated via Passport
   if (req.isAuthenticated() && req.user) {
-    res.json({
+    return res.json({
       authenticated: true,
       user: {
         id: req.user.id,
@@ -79,10 +83,36 @@ router.get('/current-user', (req, res) => {
         isAvailable: req.user.isAvailable
       }
     });
-  } else {
-    console.log('❌ Not authenticated - Missing session or user');
-    res.json({ authenticated: false });
   }
+  
+  // Fallback: Check if userId stored in session (for cookie issues)
+  if (req.session?.userId) {
+    console.log('🔄 Using fallback - userId from session:', req.session.userId);
+    try {
+      const User = (await import('../models/User.js')).default;
+      const user = await User.findByPk(req.session.userId);
+      
+      if (user) {
+        return res.json({
+          authenticated: true,
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            skills: user.skills,
+            bio: user.bio,
+            isAvailable: user.isAvailable
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    }
+  }
+  
+  console.log('❌ Not authenticated - Missing session or user');
+  res.json({ authenticated: false });
 });
 
 // @route   GET /auth/test-session
