@@ -245,11 +245,40 @@ function filterUsers(searchTerm) {
   }
   
   const term = searchTerm.toLowerCase();
+  
+  // Fuzzy search function - matches partial strings and close words
+  const fuzzyMatch = (text, search) => {
+    if (!text) return false;
+    text = text.toLowerCase();
+    
+    // Direct includes match
+    if (text.includes(search)) return true;
+    
+    // Fuzzy matching - check if search chars appear in order
+    let searchIndex = 0;
+    for (let i = 0; i < text.length && searchIndex < search.length; i++) {
+      if (text[i] === search[searchIndex]) {
+        searchIndex++;
+      }
+    }
+    if (searchIndex === search.length) return true;
+    
+    // Check similarity - if search is at least 70% contained in text
+    const searchChars = search.split('');
+    const matchCount = searchChars.filter(char => text.includes(char)).length;
+    const similarity = matchCount / search.length;
+    return similarity >= 0.7;
+  };
+  
   const filtered = allUsers.filter(user => {
-    const nameMatch = user.name.toLowerCase().includes(term);
+    // Check name match with fuzzy search
+    const nameMatch = fuzzyMatch(user.name, term);
+    
+    // Check skills match with fuzzy search
     const skillMatch = user.skills && user.skills.some(skill => 
-      skill.toLowerCase().includes(term)
+      fuzzyMatch(skill, term)
     );
+    
     return nameMatch || skillMatch;
   });
   
