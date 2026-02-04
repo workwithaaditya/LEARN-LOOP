@@ -10,12 +10,14 @@ import { Server } from 'socket.io';
 import sequelize from './config/database.js';
 import User from './models/User.js';
 import Ping from './models/Ping.js';
+import Friendship from './models/Friendship.js';
 
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import matchRoutes from './routes/match.js';
 import pingRoutes from './routes/ping.js';
+import friendsRoutes from './routes/friends.js';
 
 // Import socket handler
 import { setupSocketHandlers } from './socket/socketHandler.js';
@@ -85,6 +87,7 @@ app.use('/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/match', matchRoutes);
 app.use('/api/ping', pingRoutes);
+app.use('/api/friends', friendsRoutes);
 
 // Health check endpoint
 app.get('/health', (req, res) => {

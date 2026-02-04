@@ -578,3 +578,148 @@
     padding: var(--spacing-xl);
     opacity: 0.6;
 }
+
+/* Profile Modal */
+.profile-modal-content {
+    text-align: center;
+    padding: var(--spacing-lg);
+}
+
+.modal-avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid var(--color-primary);
+    margin-bottom: var(--spacing-md);
+}
+
+.modal-skills {
+    margin: var(--spacing-lg) 0;
+    text-align: left;
+}
+
+.modal-skills h4 {
+    font-size: var(--font-size-sm);
+    margin-bottom: var(--spacing-sm);
+    opacity: 0.7;
+}
+
+#modalUserSkills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+#modalUserSkills .user-skill-tag {
+    padding: 0.25rem 0.75rem;
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--color-primary);
+    border-radius: var(--radius-full);
+    font-size: 0.875rem;
+}
+
+.modal-bio {
+    text-align: left;
+    padding: var(--spacing-md);
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--radius-md);
+    margin-top: var(--spacing-md);
+}
+
+[data-theme="dark"] .modal-bio {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Friends List */
+.friends-card {
+    grid-column: span 1;
+}
+
+.friends-list {
+    max-height: 350px;
+    overflow-y: auto;
+}
+
+.friend-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    background: rgba(0, 0, 0, 0.02);
+    transition: all var(--transition-base);
+}
+
+[data-theme="dark"] .friend-item {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.friend-item:hover {
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.friend-info {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
+.friend-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    position: relative;
+}
+
+.friend-name {
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+}
+
+.friend-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.friend-requests {
+    margin-top: var(--spacing-lg);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="dark"] .friend-requests {
+    border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.friend-request-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacing-sm);
+    border-radius: var(--radius-md);
+    background: rgba(245, 158, 11, 0.1);
+    margin-bottom: var(--spacing-sm);
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-icon-sm {
+    padding: 0.375rem;
+    font-size: 0.875rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    color: var(--color-text);
+    transition: all var(--transition-base);
+}
+
+.btn-icon-sm:hover {
+    background: rgba(220, 38, 38, 0.1);
+    color: var(--color-primary);
+}

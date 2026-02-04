@@ -28,6 +28,7 @@ const editSkillsBtn = document.getElementById('editSkillsBtn');
 const startRandomCallBtn = document.getElementById('startRandomCallBtn');
 const refreshUsersBtn = document.getElementById('refreshUsersBtn');
 const themeToggle = document.getElementById('themeToggle');
+const logoutBtn = document.getElementById('logoutBtn');
 
 // Ping/Notification elements
 const pingsNotifBtn = document.getElementById('pingsNotifBtn');
@@ -37,6 +38,18 @@ const closePingsModal = document.getElementById('closePingsModal');
 const closePingsBtn = document.getElementById('closePingsBtn');
 const markAllReadBtn = document.getElementById('markAllReadBtn');
 const pingsContainer = document.getElementById('pingsContainer');
+
+// Profile Modal elements
+const profileModal = document.getElementById('profileModal');
+const closeProfileModal = document.getElementById('closeProfileModal');
+const closeProfModalBtn = document.getElementById('closeProfModalBtn');
+const friendActionBtn = document.getElementById('friendActionBtn');
+
+// Friends elements
+const friendsList = document.getElementById('friendsList');
+const friendRequests = document.getElementById('friendRequests');
+const friendRequestsList = document.getElementById('friendRequestsList');
+const refreshFriendsBtn = document.getElementById('refreshFriendsBtn');
 
 // Modal elements
 const skillsModal = document.getElementById('skillsModal');
@@ -77,8 +90,9 @@ async function init() {
   // Join socket room
   socket.emit('user:join', { userId: currentUser.id });
   
-  // Load users and pings
+  // Load users, friends, and pings
   loadUsers();
+  loadFriends();
   loadPings();
   
   // Setup theme
@@ -140,6 +154,8 @@ function displayUsers(users) {
   users.forEach(user => {
     const userItem = document.createElement('div');
     userItem.className = 'user-item';
+    userItem.onclick = () => openProfileModal(user);
+    userItem.style.cursor = 'pointer';
     
     const userLeft = document.createElement('div');
     userLeft.className = 'user-item-left';
@@ -186,11 +202,17 @@ function displayUsers(users) {
     if (user.isAvailable && !user.inCall) {
       actionBtn.className = 'btn-primary btn-sm';
       actionBtn.textContent = '📞 Call';
-      actionBtn.onclick = () => initiateCall(user);
+      actionBtn.onclick = (e) => {
+        e.stopPropagation();
+        initiateCall(user);
+      };
     } else {
       actionBtn.className = 'btn-secondary btn-sm';
       actionBtn.textContent = '📬 Ping';
-      actionBtn.onclick = () => sendPing(user);
+      actionBtn.onclick = (e) => {
+        e.stopPropagation();
+        sendPing(user);
+      };
     }
     
     userItem.appendChild(userLeft);
@@ -633,6 +655,287 @@ closePingsBtn.addEventListener('click', () => {
 });
 
 markAllReadBtn.addEventListener('click', markAllPingsRead);
+
+// Logout handler
+logoutBtn.addEventListener('click', async () => {
+  try {
+    await fetch(`${API_URL}/auth/logout`, {
+      credentials: 'include'
+    });
+    window.location.href = '/index.html';
+  } catch (error) {
+    console.error('Logout error:', error);
+    window.location.href = '/index.html';
+  }
+});
+
+// ============================================
+// FRIENDS FUNCTIONALITY
+// ============================================
+
+let selectedProfileUser = null;
+
+async function loadFriends() {
+  try {
+    const response = await fetch(`${API_URL}/api/friends`, {
+      credentials: 'include'
+    });
+    
+    const data = await response.json();
+    
+    displayFriends(data.friends);
+    displayFriendRequests(data.pendingRequests);
+  } catch (error) {
+    console.error('Error loading friends:', error);
+    friendsList.innerHTML = '<p class="no-pings">Failed to load friends</p>';
+  }
+}
+
+function displayFriends(friends) {
+  if (!friends || friends.length === 0) {
+    friendsList.innerHTML = '<p class="no-pings">No friends yet. Add some!</p>';
+    return;
+  }
+  
+  friendsList.innerHTML = '';
+  
+  friends.forEach(friend => {
+    const friendItem = document.createElement('div');
+    friendItem.className = 'friend-item';
+    friendItem.onclick = () => openProfileModal(friend);
+    
+    const friendInfo = document.createElement('div');
+    friendInfo.className = 'friend-info';
+    
+    const avatarContainer = document.createElement('div');
+    avatarContainer.style.position = 'relative';
+    
+    const avatar = document.createElement('img');
+    avatar.src = friend.avatar;
+    avatar.alt = friend.name;
+    avatar.className = 'friend-avatar';
+    
+    const statusDot = document.createElement('div');
+    statusDot.className = `status-indicator ${friend.isAvailable ? 'status-online' : 'status-offline'}`;
+    
+    avatarContainer.appendChild(avatar);
+    avatarContainer.appendChild(statusDot);
+    
+    const name = document.createElement('span');
+    name.className = 'friend-name';
+    name.textContent = friend.name;
+    
+    friendInfo.appendChild(avatarContainer);
+    friendInfo.appendChild(name);
+    
+    const actions = document.createElement('div');
+    actions.className = 'friend-actions';
+    
+    if (friend.isAvailable && !friend.inCall) {
+      const callBtn = document.createElement('button');
+      callBtn.className = 'btn-primary btn-sm';
+      callBtn.textContent = '📞';
+      callBtn.onclick = (e) => {
+        e.stopPropagation();
+        initiateCall(friend);
+      };
+      actions.appendChild(callBtn);
+    }
+    
+    const pingBtn = document.createElement('button');
+    pingBtn.className = 'btn-secondary btn-sm';
+    pingBtn.textContent = '📬';
+    pingBtn.onclick = (e) => {
+      e.stopPropagation();
+      sendPing(friend);
+    };
+    actions.appendChild(pingBtn);
+    
+    friendItem.appendChild(friendInfo);
+    friendItem.appendChild(actions);
+    
+    friendsList.appendChild(friendItem);
+  });
+}
+
+function displayFriendRequests(requests) {
+  if (!requests || requests.length === 0) {
+    friendRequests.style.display = 'none';
+    return;
+  }
+  
+  friendRequests.style.display = 'block';
+  friendRequestsList.innerHTML = '';
+  
+  requests.forEach(request => {
+    const requestItem = document.createElement('div');
+    requestItem.className = 'friend-request-item';
+    
+    const reqInfo = document.createElement('div');
+    reqInfo.className = 'friend-info';
+    
+    const avatar = document.createElement('img');
+    avatar.src = request.requester.avatar;
+    avatar.alt = request.requester.name;
+    avatar.className = 'friend-avatar';
+    
+    const name = document.createElement('span');
+    name.textContent = request.requester.name;
+    
+    reqInfo.appendChild(avatar);
+    reqInfo.appendChild(name);
+    
+    const actions = document.createElement('div');
+    actions.className = 'friend-actions';
+    
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'btn-primary btn-sm';
+    acceptBtn.textContent = '✓ Accept';
+    acceptBtn.onclick = () => acceptFriendRequest(request.id);
+    
+    const rejectBtn = document.createElement('button');
+    rejectBtn.className = 'btn-secondary btn-sm';
+    rejectBtn.textContent = '✕';
+    rejectBtn.onclick = () => rejectFriendRequest(request.id);
+    
+    actions.appendChild(acceptBtn);
+    actions.appendChild(rejectBtn);
+    
+    requestItem.appendChild(reqInfo);
+    requestItem.appendChild(actions);
+    
+    friendRequestsList.appendChild(requestItem);
+  });
+}
+
+async function openProfileModal(user) {
+  selectedProfileUser = user;
+  
+  document.getElementById('modalUserAvatar').src = user.avatar;
+  document.getElementById('modalUserName').textContent = user.name;
+  document.getElementById('modalUserEmail').textContent = user.email;
+  
+  const skillsContainer = document.getElementById('modalUserSkills');
+  skillsContainer.innerHTML = '';
+  if (user.skills && user.skills.length > 0) {
+    user.skills.forEach(skill => {
+      const skillTag = document.createElement('span');
+      skillTag.className = 'user-skill-tag';
+      skillTag.textContent = skill;
+      skillsContainer.appendChild(skillTag);
+    });
+  }
+  
+  document.getElementById('modalUserBio').textContent = user.bio || 'No bio provided.';
+  
+  // Check friendship status
+  try {
+    const response = await fetch(`${API_URL}/api/friends/check/${user.id}`, {
+      credentials: 'include'
+    });
+    const data = await response.json();
+    
+    if (data.status === 'accepted') {
+      friendActionBtn.textContent = '✕ Remove Friend';
+      friendActionBtn.className = 'btn-secondary';
+      friendActionBtn.onclick = () => removeFriend(user.friendshipId || data.friendshipId);
+    } else if (data.status === 'pending') {
+      friendActionBtn.textContent = data.isSender ? 'Request Sent' : 'Accept Request';
+      friendActionBtn.className = data.isSender ? 'btn-secondary' : 'btn-primary';
+      friendActionBtn.disabled = data.isSender;
+      if (!data.isSender) {
+        friendActionBtn.onclick = () => acceptFriendRequest(data.friendshipId);
+      }
+    } else {
+      friendActionBtn.textContent = '+ Add Friend';
+      friendActionBtn.className = 'btn-primary';
+      friendActionBtn.disabled = false;
+      friendActionBtn.onclick = () => sendFriendRequest(user.id);
+    }
+  } catch (error) {
+    console.error('Error checking friendship status:', error);
+  }
+  
+  profileModal.style.display = 'flex';
+}
+
+async function sendFriendRequest(userId) {
+  try {
+    await fetch(`${API_URL}/api/friends/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ addresseeId: userId })
+    });
+    
+    showNotification('Friend request sent!');
+    profileModal.style.display = 'none';
+    loadFriends();
+  } catch (error) {
+    console.error('Error sending friend request:', error);
+    showNotification('Failed to send friend request');
+  }
+}
+
+async function acceptFriendRequest(friendshipId) {
+  try {
+    await fetch(`${API_URL}/api/friends/${friendshipId}/accept`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    showNotification('Friend request accepted!');
+    profileModal.style.display = 'none';
+    loadFriends();
+  } catch (error) {
+    console.error('Error accepting friend request:', error);
+    showNotification('Failed to accept request');
+  }
+}
+
+async function rejectFriendRequest(friendshipId) {
+  try {
+    await fetch(`${API_URL}/api/friends/${friendshipId}/reject`, {
+      method: 'PUT',
+      credentials: 'include'
+    });
+    
+    showNotification('Friend request rejected');
+    loadFriends();
+  } catch (error) {
+    console.error('Error rejecting friend request:', error);
+    showNotification('Failed to reject request');
+  }
+}
+
+async function removeFriend(friendshipId) {
+  if (!confirm('Remove this friend?')) return;
+  
+  try {
+    await fetch(`${API_URL}/api/friends/${friendshipId}`, {
+      method: 'DELETE',
+      credentials: 'include'
+    });
+    
+    showNotification('Friend removed');
+    profileModal.style.display = 'none';
+    loadFriends();
+  } catch (error) {
+    console.error('Error removing friend:', error);
+    showNotification('Failed to remove friend');
+  }
+}
+
+// Profile modal handlers
+closeProfileModal.addEventListener('click', () => {
+  profileModal.style.display = 'none';
+});
+
+closeProfModalBtn.addEventListener('click', () => {
+  profileModal.style.display = 'none';
+});
+
+refreshFriendsBtn.addEventListener('click', loadFriends);
 
 // Theme toggle
 themeToggle.addEventListener('click', () => {
