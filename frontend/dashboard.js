@@ -18,6 +18,7 @@ const config = {
 // DOM Elements
 const userAvatar = document.getElementById('userAvatar');
 const userName = document.getElementById('userName');
+const userMenu = document.getElementById('userMenu');
 const profileAvatar = document.getElementById('profileAvatar');
 const profileName = document.getElementById('profileName');
 const profileEmail = document.getElementById('profileEmail');
@@ -39,11 +40,16 @@ const closePingsBtn = document.getElementById('closePingsBtn');
 const markAllReadBtn = document.getElementById('markAllReadBtn');
 const pingsContainer = document.getElementById('pingsContainer');
 
-// Profile Modal elements
+// Profile Modal elements (for other users)
 const profileModal = document.getElementById('profileModal');
 const closeProfileModal = document.getElementById('closeProfileModal');
 const closeProfModalBtn = document.getElementById('closeProfModalBtn');
 const friendActionBtn = document.getElementById('friendActionBtn');
+
+// Self Profile Modal elements
+const selfProfileModal = document.getElementById('selfProfileModal');
+const closeSelfProfileModal = document.getElementById('closeSelfProfileModal');
+const closeSelfProfBtn = document.getElementById('closeSelfProfBtn');
 
 // Friends elements
 const friendsList = document.getElementById('friendsList');
@@ -261,6 +267,19 @@ closeSkillsModal.addEventListener('click', () => {
 
 cancelSkillsBtn.addEventListener('click', () => {
   skillsModal.classList.remove('active');
+});
+
+// Self profile modal handlers
+userMenu.addEventListener('click', () => {
+  selfProfileModal.classList.add('active');
+});
+
+closeSelfProfileModal.addEventListener('click', () => {
+  selfProfileModal.classList.remove('active');
+});
+
+closeSelfProfBtn.addEventListener('click', () => {
+  selfProfileModal.classList.remove('active');
 });
 
 saveSkillsBtn.addEventListener('click', async () => {
