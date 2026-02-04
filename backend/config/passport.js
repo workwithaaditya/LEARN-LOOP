@@ -44,15 +44,19 @@ passport.use(new GoogleStrategy({
 
 // Serialize user for session
 passport.serializeUser((user, done) => {
+  console.log('🔵 Serializing user:', user.id);
   done(null, user.id);
 });
 
 // Deserialize user from session
 passport.deserializeUser(async (id, done) => {
+  console.log('🔵 Deserializing user ID:', id);
   try {
     const user = await User.findByPk(id);
+    console.log('🔵 User found:', user ? user.id : 'NOT FOUND');
     done(null, user);
   } catch (error) {
+    console.error('❌ Deserialize error:', error);
     done(error, null);
   }
 });

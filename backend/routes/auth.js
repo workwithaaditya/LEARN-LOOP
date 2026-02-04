@@ -16,14 +16,27 @@ router.get('/google/callback',
     failureRedirect: `${process.env.FRONTEND_URL}/index.html?error=auth_failed` 
   }),
   (req, res) => {
+    console.log('🔐 OAuth Callback - User authenticated');
+    console.log('User from passport:', req.user);
+    console.log('Session before save:', req.session);
+    console.log('Is Authenticated:', req.isAuthenticated());
+    
+    if (!req.user) {
+      console.error('❌ No user in request after passport authentication');
+      return res.redirect(`${process.env.FRONTEND_URL}/index.html?error=no_user`);
+    }
+    
     // Successful authentication
-    // Set a temporary flag in session to confirm auth
     req.session.justAuthenticated = true;
     req.session.save((err) => {
       if (err) {
-        console.error('Session save error:', err);
+        console.error('❌ Session save error:', err);
         return res.redirect(`${process.env.FRONTEND_URL}/index.html?error=session_error`);
       }
+      console.log('✅ Session saved successfully');
+      console.log('Session after save:', req.session);
+      console.log('Session ID:', req.sessionID);
+      
       // Redirect to frontend dashboard
       res.redirect(`${process.env.FRONTEND_URL}/dashboard.html`);
     });
