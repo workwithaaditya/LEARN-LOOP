@@ -451,9 +451,8 @@ startRandomCallBtn.addEventListener('click', async () => {
     } else {
       // Keep modal open and show searching state
       videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'No one available. Searching...';
-      showNotification('No users available right now. Searching for someone...', 'info');
-      // Auto-retry every 5 seconds
+      remoteLabel.textContent = 'Searching...';
+      // Auto-retry every 5 seconds (silent)
       setTimeout(() => {
         if (videoModal.classList.contains('active') && !currentCallUser) {
           startRandomCallBtn.click();
@@ -631,9 +630,8 @@ skipCallBtn.addEventListener('click', async () => {
       await startVideoCall(data.match);
     } else {
       videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'No one available. Searching...';
-      showNotification('No users available right now. Keep waiting or try again later!', 'info');
-      // Keep searching every 5 seconds
+      remoteLabel.textContent = 'Searching...';
+      // Keep searching every 5 seconds (silent)
       setTimeout(() => {
         if (videoModal.classList.contains('active') && !currentCallUser) {
           skipCallBtn.click();
