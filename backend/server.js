@@ -64,7 +64,8 @@ app.use(session({
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
+    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
+    partitioned: true // Enable partitioned cookies for better browser compatibility
   }
 }));
 
