@@ -98,6 +98,18 @@ const videoInfo = document.getElementById('videoInfo');
 const remoteLabel = document.getElementById('remoteLabel');
 const motivationalQuote = document.getElementById('motivationalQuote');
 const toggleVideoBtn = document.getElementById('toggleVideoBtn');
+
+// Message Box elements
+const messageBoxBtn = document.getElementById('messageBoxBtn');
+const messageBoxModal = document.getElementById('messageBoxModal');
+const closeMessageBoxModal = document.getElementById('closeMessageBoxModal');
+const closeMessageBoxBtn = document.getElementById('closeMessageBoxBtn');
+const clearMessagesBtn = document.getElementById('clearMessagesBtn');
+const messagesList = document.getElementById('messagesList');
+const messageTabs = document.querySelectorAll('.message-tab');
+
+// Message storage
+let messagesStore = JSON.parse(localStorage.getItem('dashboardMessages') || '[]');
 const toggleAudioBtn = document.getElementById('toggleAudioBtn');
 const skipCallBtn = document.getElementById('skipCallBtn');
 const endCallBtn = document.getElementById('endCallBtn');
@@ -362,7 +374,7 @@ quickSkillInput.addEventListener('keypress', async (e) => {
       displaySkills();
       quickSkillInput.value = '';
     } else {
-      alert('Skill already added!');
+      showNotification('Skill already added!', 'warning');
     }
   }
 });
@@ -409,12 +421,12 @@ startRandomCallBtn.addEventListener('click', async () => {
       await startVideoCall(data.match);
     } else {
       videoModal.classList.remove('active');
-      alert('No users available for matching right now. Try again later!');
+      showNotification('No users available for matching right now. Try again later!', 'info');
     }
   } catch (error) {
     console.error('Error finding match:', error);
     videoModal.classList.remove('active');
-    alert('Failed to find a match. Please try again.');
+    showNotification('Failed to find a match. Please try again.', 'error');
   } finally {
     isSearchingMatch = false;
   }
@@ -485,11 +497,11 @@ async function startVideoCall(user) {
   } catch (error) {
     console.error('Error starting video call:', error);
     if (error.name === 'NotAllowedError') {
-      alert('Camera/microphone access denied. Please allow permissions and try again.');
+      showNotification('Camera/microphone access denied. Please allow permissions and try again.', 'error');
     } else if (error.name === 'NotFoundError') {
-      alert('No camera or microphone found. Please connect a device.');
+      showNotification('No camera or microphone found. Please connect a device.', 'error');
     } else {
-      alert('Failed to start video call: ' + error.message);
+      showNotification('Failed to start video call: ' + error.message, 'error');
     }
     endVideoCall();
   }
@@ -583,12 +595,12 @@ skipCallBtn.addEventListener('click', async () => {
       await startVideoCall(data.match);
     } else {
       endVideoCall();
-      alert('No users available for matching right now. Try again later!');
+      showNotification('No users available for matching right now. Try again later!', 'info');
     }
   } catch (error) {
     console.error('Error finding match:', error);
     endVideoCall();
-    alert('Failed to find a match. Please try again.');
+    showNotification('Failed to find a match. Please try again.', 'error');
   } finally {
     isSearchingMatch = false;
   }
@@ -598,7 +610,7 @@ endCallBtn.addEventListener('click', endVideoCall);
 
 // Socket events
 socket.on('user:ping-received', (data) => {
-  alert(`${data.from.name}: ${data.message}`);
+  showNotification(`${data.from.name}: ${data.message}`, 'info');
 });
 
 socket.on('users:updated', () => {
@@ -671,9 +683,9 @@ socket.on('call:incoming', async (data) => {
   } catch (error) {
     console.error('Error handling incoming call:', error);
     if (error.name === 'NotAllowedError') {
-      alert('Camera/microphone access denied. Please allow permissions.');
+      showNotification('Camera/microphone access denied. Please allow permissions.', 'error');
     } else {
-      alert('Failed to answer call: ' + error.message);
+      showNotification('Failed to answer call: ' + error.message, 'error');
     }
     endVideoCall();
   }
@@ -688,7 +700,7 @@ socket.on('call:answered', async (data) => {
 });
 
 socket.on('call:declined', () => {
-  alert('Call declined by the other user.');
+  showNotification('Call declined by the other user.', 'info');
   endVideoCall();
 });
 
@@ -717,7 +729,7 @@ socket.on('ping:received', (ping) => {
   updatePingsBadge();
   
   // Show notification
-  showNotification(`${ping.from.name} ${ping.message}`);
+  showNotification(`${ping.from.name} ${ping.message}`, 'info');
   
   // Reload pings if modal is open
   if (pingsModal.style.display === 'flex') {
@@ -729,10 +741,10 @@ socket.on('ping:received', (ping) => {
 socket.on('ping:sent', (response) => {
   if (response.success) {
     // Ping sent successfully
-    console.log('Ping sent successfully to user:', response.toUserId);
+    showNotification('Ping sent successfully!', 'success');
   } else {
     // Show error to user
-    alert(response.error);
+    showNotification(response.error, 'warning');
   }
 });
 
@@ -753,7 +765,7 @@ async function sendPing(user) {
     });
   } catch (error) {
     console.error('Error sending ping:', error);
-    showNotification('Failed to send ping');
+    showNotification('Failed to send ping', 'error');
   }
 }
 
@@ -863,29 +875,221 @@ function formatTimeAgo(date) {
   return `${days}d ago`;
 }
 
-function showNotification(message) {
-  // Simple toast notification
+function showNotification(message, type = 'info') {
+  // Custom toast notification with types
   const toast = document.createElement('div');
+  toast.className = 'custom-notification';
+  
+  const icons = {
+    success: '✓',
+    error: '✕',
+    warning: '⚠',
+    info: 'ℹ'
+  };
+  
+  const colors = {
+    success: '#10b981',
+    error: '#ef4444',
+    warning: '#f59e0b',
+    info: '#3b82f6'
+  };
+  
   toast.style.cssText = `
     position: fixed;
-    bottom: 20px;
+    top: 80px;
     right: 20px;
-    background: var(--color-primary);
-    color: white;
+    background: white;
+    color: #1a202c;
     padding: 1rem 1.5rem;
-    border-radius: var(--radius-lg);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
     z-index: 10000;
-    animation: slideIn 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 300px;
+    max-width: 400px;
+    animation: slideInRight 0.3s ease;
+    border-left: 4px solid ${colors[type]};
   `;
-  toast.textContent = message;
+  
+  const icon = document.createElement('span');
+  icon.style.cssText = `
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: ${colors[type]};
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+  `;
+  icon.textContent = icons[type];
+  
+  const text = document.createElement('span');
+  text.style.cssText = `
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.4;
+  `;
+  text.textContent = message;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.innerHTML = '×';
+  closeBtn.style.cssText = `
+    border: none;
+    background: none;
+    font-size: 24px;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  `;
+  closeBtn.onclick = () => {
+    toast.style.animation = 'slideOutRight 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  };
+  
+  toast.appendChild(icon);
+  toast.appendChild(text);
+  toast.appendChild(closeBtn);
   document.body.appendChild(toast);
   
+  // Dark mode support
+  if (document.documentElement.classList.contains('dark-theme')) {
+    toast.style.background = '#1f2937';
+    toast.style.color = '#f3f4f6';
+  }
+  
   setTimeout(() => {
-    toast.style.animation = 'slideOut 0.3s ease';
+    toast.style.animation = 'slideOutRight 0.3s ease';
     setTimeout(() => toast.remove(), 300);
-  }, 3000);
+  }, 5000);
+  
+  // Add to message box
+  addMessageToBox(message, type);
 }
+
+// Message Box Functions
+function addMessageToBox(message, type = 'info') {
+  const messageObj = {
+    id: Date.now(),
+    message,
+    type,
+    timestamp: new Date().toISOString(),
+    category: 'system'
+  };
+  
+  messagesStore.unshift(messageObj);
+  
+  // Keep only last 50 messages
+  if (messagesStore.length > 50) {
+    messagesStore = messagesStore.slice(0, 50);
+  }
+  
+  localStorage.setItem('dashboardMessages', JSON.stringify(messagesStore));
+  
+  // Update badge count if message box is closed
+  if (messageBoxModal.style.display !== 'flex') {
+    updateMessageBadge();
+  }
+}
+
+function updateMessageBadge() {
+  const unreadCount = messagesStore.filter(m => !m.read).length;
+  const badge = document.querySelector('#messageBoxBtn .notification-badge');
+  if (!badge) {
+    const newBadge = document.createElement('span');
+    newBadge.className = 'notification-badge';
+    newBadge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    newBadge.textContent = unreadCount;
+    messageBoxBtn.appendChild(newBadge);
+  } else {
+    badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    badge.textContent = unreadCount;
+  }
+}
+
+function loadMessages(filter = 'all') {
+  const filteredMessages = filter === 'all' 
+    ? messagesStore 
+    : messagesStore.filter(m => m.category === filter);
+  
+  if (filteredMessages.length === 0) {
+    messagesList.innerHTML = '<p class="no-messages">No messages yet</p>';
+    return;
+  }
+  
+  messagesList.innerHTML = filteredMessages.map(msg => {
+    const icon = {
+      success: '✓',
+      error: '✕',
+      warning: '⚠',
+      info: 'ℹ'
+    }[msg.type];
+    
+    const timeAgo = getTimeAgo(new Date(msg.timestamp));
+    
+    return `
+      <div class="message-item" data-id="${msg.id}">
+        <div class="message-icon ${msg.type}">
+          ${icon}
+        </div>
+        <div class="message-content">
+          <p class="message-text">${msg.message}</p>
+          <span class="message-time">${timeAgo}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  // Mark all as read
+  messagesStore.forEach(m => m.read = true);
+  localStorage.setItem('dashboardMessages', JSON.stringify(messagesStore));
+  updateMessageBadge();
+}
+
+// Message Box Event Listeners
+messageBoxBtn.addEventListener('click', () => {
+  messageBoxModal.style.display = 'flex';
+  loadMessages('all');
+});
+
+closeMessageBoxModal.addEventListener('click', () => {
+  messageBoxModal.style.display = 'none';
+});
+
+closeMessageBoxBtn.addEventListener('click', () => {
+  messageBoxModal.style.display = 'none';
+});
+
+clearMessagesBtn.addEventListener('click', () => {
+  if (confirm('Clear all messages?')) {
+    messagesStore = [];
+    localStorage.removeItem('dashboardMessages');
+    loadMessages('all');
+    updateMessageBadge();
+  }
+});
+
+messageTabs.forEach(tab => {
+  tab.addEventListener('click', () => {
+    messageTabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    loadMessages(tab.dataset.tab);
+  });
+});
+
+// Initialize message badge on page load
+updateMessageBadge();
 
 // Pings modal handlers
 pingsNotifBtn.addEventListener('click', () => {
@@ -1115,12 +1319,12 @@ async function sendFriendRequest(userId) {
       body: JSON.stringify({ addresseeId: userId })
     });
     
-    showNotification('Friend request sent!');
+    showNotification('Friend request sent!', 'success');
     profileModal.style.display = 'none';
     loadFriends();
   } catch (error) {
     console.error('Error sending friend request:', error);
-    showNotification('Failed to send friend request');
+    showNotification('Failed to send friend request', 'error');
   }
 }
 
@@ -1131,12 +1335,12 @@ async function acceptFriendRequest(friendshipId) {
       credentials: 'include'
     });
     
-    showNotification('Friend request accepted!');
+    showNotification('Friend request accepted!', 'success');
     profileModal.style.display = 'none';
     loadFriends();
   } catch (error) {
     console.error('Error accepting friend request:', error);
-    showNotification('Failed to accept request');
+    showNotification('Failed to accept request', 'error');
   }
 }
 
@@ -1147,11 +1351,11 @@ async function rejectFriendRequest(friendshipId) {
       credentials: 'include'
     });
     
-    showNotification('Friend request rejected');
+    showNotification('Friend request rejected', 'info');
     loadFriends();
   } catch (error) {
     console.error('Error rejecting friend request:', error);
-    showNotification('Failed to reject request');
+    showNotification('Failed to reject request', 'error');
   }
 }
 
