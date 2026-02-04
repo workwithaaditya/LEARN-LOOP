@@ -7,6 +7,7 @@ let localStream = null;
 let remoteStream = null;
 let peerConnection = null;
 let currentCallUser = null;
+let allUsers = []; // Store all users for filtering
 
 const config = {
   iceServers: [
@@ -25,7 +26,8 @@ const profileEmail = document.getElementById('profileEmail');
 const skillsList = document.getElementById('skillsList');
 const usersList = document.getElementById('usersList');
 const availabilityToggle = document.getElementById('availabilityToggle');
-const editSkillsBtn = document.getElementById('editSkillsBtn');
+const quickSkillInput = document.getElementById('quickSkillInput');
+const userSearchInput = document.getElementById('userSearchInput');
 const startRandomCallBtn = document.getElementById('startRandomCallBtn');
 const refreshUsersBtn = document.getElementById('refreshUsersBtn');
 const themeToggle = document.getElementById('themeToggle');
@@ -58,12 +60,7 @@ const friendRequestsList = document.getElementById('friendRequestsList');
 const refreshFriendsBtn = document.getElementById('refreshFriendsBtn');
 
 // Modal elements
-const skillsModal = document.getElementById('skillsModal');
 const videoModal = document.getElementById('videoModal');
-const closeSkillsModal = document.getElementById('closeSkillsModal');
-const cancelSkillsBtn = document.getElementById('cancelSkillsBtn');
-const saveSkillsBtn = document.getElementById('saveSkillsBtn');
-const skillsInput = document.getElementById('skillsInput');
 
 // Video elements
 const localVideo = document.getElementById('localVideo');
@@ -122,14 +119,54 @@ function displayUserInfo() {
 function displaySkills() {
   skillsList.innerHTML = '';
   if (currentUser.skills && currentUser.skills.length > 0) {
-    currentUser.skills.forEach(skill => {
-      const tag = document.createElement('span');
-      tag.className = 'skill-tag';
-      tag.textContent = skill;
-      skillsList.appendChild(tag);
+    currentUser.skills.forEach((skill, index) => {
+      const skillItem = document.createElement('div');
+      skillItem.className = 'skill-tag';
+      skillItem.style.display = 'inline-flex';
+      skillItem.style.alignItems = 'center';
+      skillItem.style.gap = '0.5rem';
+      
+      const skillText = document.createElement('span');
+      skillText.textContent = skill;
+      
+      const removeBtn = document.createElement('button');
+      removeBtn.innerHTML = '&times;';
+      removeBtn.style.background = 'none';
+      removeBtn.style.border = 'none';
+      removeBtn.style.color = 'inherit';
+      removeBtn.style.cursor = 'pointer';
+      removeBtn.style.fontSize = '1.2rem';
+      removeBtn.style.padding = '0';
+      removeBtn.style.marginLeft = '0.25rem';
+      removeBtn.onclick = () => removeSkill(index);
+      
+      skillItem.appendChild(skillText);
+      skillItem.appendChild(removeBtn);
+      skillsList.appendChild(skillItem);
     });
   } else {
     skillsList.innerHTML = '<p style="color: var(--color-text-muted); font-size: 0.875rem;">No skills added yet</p>';
+  }
+}
+
+async function removeSkill(index) {
+  currentUser.skills.splice(index, 1);
+  await updateSkills();
+  displaySkills();
+}
+
+async function updateSkills() {
+  try {
+    const response = await fetch(`${API_URL}/api/users/profile`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ skills: currentUser.skills })
+    });
+    const data = await response.json();
+    currentUser.skills = data.user.skills;
+  } catch (error) {
+    console.error('Error updating skills:', error);
   }
 }
 
@@ -144,7 +181,8 @@ async function loadUsers() {
     const data = await response.json();
     
     if (data.users && data.users.length > 0) {
-      displayUsers(data.users);
+      allUsers = data.users;
+      displayUsers(allUsers);
     } else {
       usersList.innerHTML = '<p class="no-users">No users available right now</p>';
     }
@@ -152,6 +190,24 @@ async function loadUsers() {
     console.error('Error loading users:', error);
     usersList.innerHTML = '<p class="no-users">Failed to load users</p>';
   }
+}
+
+function filterUsers(searchTerm) {
+  if (!searchTerm.trim()) {
+    displayUsers(allUsers);
+    return;
+  }
+  
+  const term = searchTerm.toLowerCase();
+  const filtered = allUsers.filter(user => {
+    const nameMatch = user.name.toLowerCase().includes(term);
+    const skillMatch = user.skills && user.skills.some(skill => 
+      skill.toLowerCase().includes(term)
+    );
+    return nameMatch || skillMatch;
+  });
+  
+  displayUsers(filtered);
 }
 
 function displayUsers(users) {
@@ -203,26 +259,35 @@ function displayUsers(users) {
     userLeft.appendChild(userImgContainer);
     userLeft.appendChild(userInfo);
     
-    // Show different button based on online status
-    const actionBtn = document.createElement('button');
-    if (user.isAvailable && !user.inCall) {
-      actionBtn.className = 'btn-primary btn-sm';
-      actionBtn.textContent = '📞 Call';
-      actionBtn.onclick = (e) => {
-        e.stopPropagation();
-        initiateCall(user);
-      };
-    } else {
-      actionBtn.className = 'btn-secondary btn-sm';
-      actionBtn.textContent = '📬 Ping';
-      actionBtn.onclick = (e) => {
-        e.stopPropagation();
-        sendPing(user);
-      };
-    }
+    // Action buttons container
+    const actionsContainer = document.createElement('div');
+    actionsContainer.style.display = 'flex';
+    actionsContainer.style.gap = '0.5rem';
+    actionsContainer.style.flexWrap = 'wrap';
+    
+    // Ping button
+    const pingBtn = document.createElement('button');
+    pingBtn.className = 'btn-secondary btn-sm';
+    pingBtn.textContent = 'Ping';
+    pingBtn.onclick = (e) => {
+      e.stopPropagation();
+      sendPing(user);
+    };
+    
+    // Add Friend button
+    const addFriendBtn = document.createElement('button');
+    addFriendBtn.className = 'btn-primary btn-sm';
+    addFriendBtn.textContent = 'Add Friend';
+    addFriendBtn.onclick = (e) => {
+      e.stopPropagation();
+      sendFriendRequest(user.id);
+    };
+    
+    actionsContainer.appendChild(pingBtn);
+    actionsContainer.appendChild(addFriendBtn);
     
     userItem.appendChild(userLeft);
-    userItem.appendChild(actionBtn);
+    userItem.appendChild(actionsContainer);
     
     usersList.appendChild(userItem);
   });
@@ -255,18 +320,24 @@ availabilityToggle.addEventListener('change', async (e) => {
   }
 });
 
-// Skills modal
-editSkillsBtn.addEventListener('click', () => {
-  skillsInput.value = currentUser.skills.join(', ');
-  skillsModal.classList.add('active');
+// Quick skill input with Enter key
+quickSkillInput.addEventListener('keypress', async (e) => {
+  if (e.key === 'Enter' && quickSkillInput.value.trim()) {
+    const newSkill = quickSkillInput.value.trim();
+    if (!currentUser.skills.includes(newSkill)) {
+      currentUser.skills.push(newSkill);
+      await updateSkills();
+      displaySkills();
+      quickSkillInput.value = '';
+    } else {
+      alert('Skill already added!');
+    }
+  }
 });
 
-closeSkillsModal.addEventListener('click', () => {
-  skillsModal.classList.remove('active');
-});
-
-cancelSkillsBtn.addEventListener('click', () => {
-  skillsModal.classList.remove('active');
+// User search
+userSearchInput.addEventListener('input', (e) => {
+  filterUsers(e.target.value);
 });
 
 // Self profile modal handlers
@@ -280,26 +351,6 @@ closeSelfProfileModal.addEventListener('click', () => {
 
 closeSelfProfBtn.addEventListener('click', () => {
   selfProfileModal.classList.remove('active');
-});
-
-saveSkillsBtn.addEventListener('click', async () => {
-  const skills = skillsInput.value.split(',').map(s => s.trim()).filter(s => s);
-  
-  try {
-    const response = await fetch(`${API_URL}/api/users/profile`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ skills })
-    });
-    
-    const data = await response.json();
-    currentUser.skills = data.user.skills;
-    displaySkills();
-    skillsModal.classList.remove('active');
-  } catch (error) {
-    console.error('Error saving skills:', error);
-  }
 });
 
 // Random video call

@@ -25,17 +25,14 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                     </svg>
                 </button>
-                <div class="user-menu" id="userMenu" style="cursor: pointer;" title="Click to edit profile">
-                    <img id="userAvatar" src="" alt="User" class="user-avatar">
-                    <span id="userName"></span>
-                </div>
                 <button class="btn-icon" id="pingsNotifBtn" title="Notifications">
                     <i class="fas fa-bell"></i>
                     <span class="notification-badge" id="pingsBadge" style="display:none;">0</span>
                 </button>
-                <button class="btn-secondary btn-sm" id="logoutBtn" title="Logout">
-                    <i class="fas fa-sign-out-alt"></i> Logout
-                </button>
+                <div class="user-menu" id="userMenu" style="cursor: pointer;" title="Click to edit profile">
+                    <img id="userAvatar" src="" alt="User" class="user-avatar">
+                    <span id="userName"></span>
+                </div>
             </div>
         </div>
     </nav>
@@ -76,7 +73,7 @@
                     </div>
                 </div>
 
-                <!-- Active Users List -->
+                <!-- Available Users List -->
                 <div class="card users-card">
                     <div class="card-header">
                         <h2>Available Users</h2>
@@ -85,6 +82,9 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                             </svg>
                         </button>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" id="userSearchInput" placeholder="Search by name or skill..." class="search-input">
                     </div>
                     <div id="usersList" class="users-list">
                         <p class="loading">Loading users...</p>
@@ -206,7 +206,9 @@
                     <div class="profile-skills">
                         <h4>Your Skills</h4>
                         <div id="skillsList" class="skills-container"></div>
-                        <button class="btn-secondary" id="editSkillsBtn">Edit Skills</button>
+                        <div class="skill-input-container">
+                            <input type="text" id="quickSkillInput" placeholder="Add a skill (press Enter)" class="skill-input">
+                        </div>
                     </div>
                     <div class="availability-toggle">
                         <label>
@@ -217,6 +219,7 @@
                 </div>
             </div>
             <div class="modal-footer">
+                <button class="btn-secondary" id="logoutBtn">Logout</button>
                 <button class="btn-primary" id="closeSelfProfBtn">Close</button>
             </div>
         </div>
