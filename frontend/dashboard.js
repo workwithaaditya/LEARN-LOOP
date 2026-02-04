@@ -667,21 +667,21 @@ socket.on('users:updated', () => {
 
 socket.on('call:incoming', async (data) => {
   try {
-    const accept = confirm(`${data.from.name} wants to video call you. Accept?`);
+    // Auto-accept incoming calls
+    showNotification(`${data.from.name} is connecting to you...`, 'info');
     
-    if (accept) {
-      currentCallUser = data.from;
-      remoteLabel.textContent = data.from.name;
-      
-      localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true, 
-        audio: true 
-      });
-      
-      localVideo.srcObject = localStream;
-      videoModal.classList.add('active');
-      motivationalQuote.textContent = `Connecting with ${data.from.name}...`;
-      videoInfo.classList.remove('hidden');
+    currentCallUser = data.from;
+    remoteLabel.textContent = data.from.name;
+    
+    localStream = await navigator.mediaDevices.getUserMedia({ 
+      video: true, 
+      audio: true 
+    });
+    
+    localVideo.srcObject = localStream;
+    videoModal.classList.add('active');
+    motivationalQuote.textContent = `Connecting with ${data.from.name}...`;
+    videoInfo.classList.remove('hidden');
       
       peerConnection = new RTCPeerConnection(iceServersConfig);
       
@@ -724,10 +724,6 @@ socket.on('call:incoming', async (data) => {
         callerId: data.callerId,
         answer: answer
       });
-    } else {
-      // User declined the call
-      socket.emit('call:declined', { callerId: data.callerId });
-    }
   } catch (error) {
     console.error('Error handling incoming call:', error);
     if (error.name === 'NotAllowedError') {
