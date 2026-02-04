@@ -43,6 +43,10 @@ const PORT = process.env.PORT || 5000;
 
 // PostgreSQL session store
 const PgSession = connectPgSimple(session);
+const sessionStore = new PgSession({
+  conString: process.env.DATABASE_URL,
+  createTableIfMissing: true
+});
 
 // Trust Railway proxy
 if (process.env.NODE_ENV === 'production') {
@@ -59,10 +63,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Session configuration with PostgreSQL store
 app.use(session({
-  store: new PgSession({
-    conString: process.env.DATABASE_URL,
-    createTableIfMissing: true
-  }),
+  store: sessionStore,
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
