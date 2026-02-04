@@ -5,8 +5,15 @@ import { Op } from 'sequelize';
 
 const router = express.Router();
 
+// Store io instance reference
+let ioInstance = null;
+
+export const setIoInstance = (io) => {
+  ioInstance = io;
+};
+
 // @route   POST /api/match/find
-// @desc    Find a random match based on skills
+// @desc    Find a random match based on skills (only online users)
 router.post('/find', isAuthenticated, async (req, res) => {
   try {
     const { preferredSkills } = req.body;
@@ -28,10 +35,15 @@ router.post('/find', isAuthenticated, async (req, res) => {
     let matches = await User.findAll({
       where: whereClause,
       attributes: ['id', 'name', 'avatar', 'skills', 'bio', 'socketId'],
-      limit: 10
+      limit: 50 // Get more candidates to filter by online status
     });
 
-    // If no skill-based matches found, find any available user
+    // Filter to only users who are actually online (connected via Socket.io)
+    if (ioInstance && ioInstance.onlineUsers) {
+      matches = matches.filter(user => ioInstance.onlineUsers.has(user.id));
+    }
+
+    // If no skill-based online matches found, find any online available user
     if (matches.length === 0 && preferredSkills) {
       matches = await User.findAll({
         where: {
@@ -40,18 +52,23 @@ router.post('/find', isAuthenticated, async (req, res) => {
           inCall: false
         },
         attributes: ['id', 'name', 'avatar', 'skills', 'bio', 'socketId'],
-        limit: 10
+        limit: 50
       });
+      
+      // Filter by online status again
+      if (ioInstance && ioInstance.onlineUsers) {
+        matches = matches.filter(user => ioInstance.onlineUsers.has(user.id));
+      }
     }
 
     if (matches.length === 0) {
       return res.json({ 
         match: null, 
-        message: 'No users available for matching right now' 
+        message: 'No users online and available for matching right now' 
       });
     }
 
-    // Select random match from available users
+    // Select random match from online available users
     const randomMatch = matches[Math.floor(Math.random() * matches.length)];
 
     res.json({ match: randomMatch });

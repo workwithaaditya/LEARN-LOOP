@@ -150,7 +150,8 @@ export const setupSocketHandlers = (io) => {
     });
   });
 
-  // Export helper functions
+  // Export helper functions and expose onlineUsers Set
   io.isUserOnline = (userId) => onlineUsers.has(userId);
   io.getOnlineUsersCount = () => onlineUsers.size;
+  io.onlineUsers = onlineUsers; // Expose the Set for match filtering
 };

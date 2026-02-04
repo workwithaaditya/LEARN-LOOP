@@ -16,6 +16,7 @@ import Friendship from './models/Friendship.js';
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/users.js';
 import matchRoutes from './routes/match.js';
+import { setIoInstance } from './routes/match.js';
 import pingRoutes from './routes/ping.js';
 import friendsRoutes from './routes/friends.js';
 
@@ -101,6 +102,9 @@ app.get('/health', (req, res) => {
 
 // Setup Socket.IO handlers
 setupSocketHandlers(io);
+
+// Pass io instance to match routes for real-time online user filtering
+setIoInstance(io);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
