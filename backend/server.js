@@ -1,5 +1,6 @@
 import express from 'express';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import passport from 'passport';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -40,6 +41,9 @@ const io = new Server(httpServer, {
 
 const PORT = process.env.PORT || 5000;
 
+// PostgreSQL session store
+const PgSession = connectPgSimple(session);
+
 // Trust Railway proxy
 if (process.env.NODE_ENV === 'production') {
   app.set('trust proxy', 1);
@@ -53,8 +57,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session configuration
+// Session configuration with PostgreSQL store
 app.use(session({
+  store: new PgSession({
+    conString: process.env.DATABASE_URL,
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
