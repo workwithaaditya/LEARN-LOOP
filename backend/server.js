@@ -20,6 +20,7 @@ import matchRoutes from './routes/match.js';
 import { setIoInstance } from './routes/match.js';
 import pingRoutes from './routes/ping.js';
 import friendsRoutes from './routes/friends.js';
+import { router as queueRouter } from './routes/queue.js';
 
 // Import socket handler
 import { setupSocketHandlers } from './socket/socketHandler.js';
@@ -99,6 +100,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/match', matchRoutes);
 app.use('/api/ping', pingRoutes);
 app.use('/api/friends', friendsRoutes);
+app.use('/api/queue', queueRouter);
 
 // ICE servers endpoint for WebRTC (STUN + TURN)
 app.get('/api/ice', async (req, res) => {

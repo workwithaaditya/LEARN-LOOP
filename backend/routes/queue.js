@@ -1,8 +1,7 @@
-// Queue system infrastructure - NOT ACTIVE YET
-// This file sets up the queue structure but doesn't implement it
-// To activate: uncomment routes in server.js and connect frontend
+// Queue system infrastructure - NOW ACTIVE
+// FIFO (First In, First Out) matching system
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Waiting queue Map structure
@@ -205,7 +204,7 @@ router.post('/find-match', async (req, res) => {
 });
 
 // Export router and queue utilities
-module.exports = {
+export { 
   router,
   waitingQueue,
   addToQueue,

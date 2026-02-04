@@ -434,36 +434,16 @@ startRandomCallBtn.addEventListener('click', async () => {
   videoModal.classList.add('active');
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
+  remoteLabel.textContent = 'Joining queue...';
   
   try {
-    const response = await fetch(`${API_URL}/api/match/find`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ preferredSkills: currentUser.skills })
-    });
+    // Join queue via socket
+    socket.emit('queue:join');
     
-    const data = await response.json();
-    
-    if (data.match) {
-      currentCallUser = data.match;
-      await startVideoCall(data.match);
-    } else {
-      // Keep modal open and show searching state
-      videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'Searching...';
-      // Auto-retry every 5 seconds (silent)
-      setTimeout(() => {
-        if (videoModal.classList.contains('active') && !currentCallUser) {
-          startRandomCallBtn.click();
-        }
-      }, 5000);
-    }
   } catch (error) {
-    console.error('Error finding match:', error);
+    console.error('Error joining queue:', error);
     videoModal.classList.remove('active');
-    showNotification('Failed to find a match. Please try again.', 'error');
-  } finally {
+    showNotification('Failed to join queue. Please try again.', 'error');
     isSearchingMatch = false;
   }
 });
@@ -610,44 +590,16 @@ skipCallBtn.addEventListener('click', async () => {
   // Show searching state
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
-  remoteLabel.textContent = 'Searching for next person...';
+  remoteLabel.textContent = 'Rejoining queue...';
   
   isSearchingMatch = true;
   
-  // Find new match
+  // Rejoin queue
   try {
-    const response = await fetch(`${API_URL}/api/match/find`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ preferredSkills: currentUser.skills })
-    });
-    
-    const data = await response.json();
-    
-    if (data.match) {
-      currentCallUser = data.match;
-      await startVideoCall(data.match);
-    } else {
-      videoInfo.classList.remove('hidden');
-      remoteLabel.textContent = 'Searching...';
-      // Keep searching every 5 seconds (silent)
-      setTimeout(() => {
-        if (videoModal.classList.contains('active') && !currentCallUser) {
-          skipCallBtn.click();
-        }
-      }, 5000);
-    }
+    socket.emit('queue:join');
   } catch (error) {
-    console.error('Error finding match:', error);
-    showNotification('Failed to find a match. Retrying...', 'warning');
-    // Retry after 3 seconds
-    setTimeout(() => {
-      if (videoModal.classList.contains('active') && !currentCallUser) {
-        skipCallBtn.click();
-      }
-    }, 3000);
-  } finally {
+    console.error('Error rejoining queue:', error);
+    showNotification('Failed to rejoin queue. Please try again.', 'error');
     isSearchingMatch = false;
   }
 });
@@ -760,6 +712,32 @@ socket.on('call:ended', () => {
   showNotification('Call ended. Searching for next person...', 'info');
   // Automatically search for next person
   skipCallBtn.click();
+});
+
+// Queue system socket events
+socket.on('queue:joined', (data) => {
+  remoteLabel.textContent = `In queue (Position: ${data.position})`;
+  console.log(`Joined queue at position ${data.position}`);
+});
+
+socket.on('queue:matched', async (data) => {
+  console.log('Matched with user:', data.match);
+  remoteLabel.textContent = `Matched with ${data.match.name}! Connecting...`;
+  currentCallUser = data.match;
+  
+  // Start video call with matched user
+  await startVideoCall(data.match);
+  isSearchingMatch = false;
+});
+
+socket.on('queue:left', () => {
+  console.log('Left queue');
+});
+
+socket.on('queue:error', (data) => {
+  console.error('Queue error:', data.message);
+  showNotification(data.message, 'error');
+  isSearchingMatch = false;
 });
 
 // Listen for user status changes

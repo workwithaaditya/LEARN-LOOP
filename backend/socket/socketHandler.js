@@ -1,6 +1,12 @@
 import User from '../models/User.js';
 import Ping from '../models/Ping.js';
 import { Op } from 'sequelize';
+import { 
+  waitingQueue, 
+  addToQueue, 
+  removeFromQueue, 
+  matchFromQueue 
+} from '../routes/queue.js';
 
 const connectedUsers = new Map(); // userId -> socketId
 const onlineUsers = new Set(); // Set of online userIds
@@ -153,6 +159,69 @@ export const setupSocketHandlers = (io) => {
       socket.emit('call:ended');
     });
 
+    // Queue system handlers
+    socket.on('queue:join', async () => {
+      try {
+        const user = await User.findByPk(socket.userId);
+        if (!user) return;
+
+        const added = addToQueue(user);
+        
+        if (added) {
+          console.log(`[Queue] User ${user.name} joined queue. Size: ${waitingQueue.size}`);
+          
+          socket.emit('queue:joined', {
+            position: waitingQueue.size,
+            queueSize: waitingQueue.size
+          });
+
+          // Try to find immediate match
+          const match = matchFromQueue(user.id);
+          
+          if (match) {
+            removeFromQueue(user.id);
+            removeFromQueue(match.userId);
+
+            console.log(`[Queue] Matched ${user.name} with ${match.name}`);
+
+            // Notify both users
+            socket.emit('queue:matched', {
+              match: {
+                id: match.userId,
+                name: match.name,
+                skills: match.skills
+              }
+            });
+
+            io.to(connectedUsers.get(match.userId)).emit('queue:matched', {
+              match: {
+                id: user.id,
+                name: user.name,
+                skills: user.skills
+              }
+            });
+          }
+        } else {
+          socket.emit('queue:error', { message: 'Already in queue' });
+        }
+      } catch (error) {
+        console.error('[Queue] Error joining queue:', error);
+        socket.emit('queue:error', { message: 'Failed to join queue' });
+      }
+    });
+
+    socket.on('queue:leave', () => {
+      try {
+        const removed = removeFromQueue(socket.userId);
+        if (removed) {
+          console.log(`[Queue] User left queue. Size: ${waitingQueue.size}`);
+          socket.emit('queue:left');
+        }
+      } catch (error) {
+        console.error('[Queue] Error leaving queue:', error);
+      }
+    });
+
     // Handle disconnect
     socket.on('disconnect', async () => {
       console.log(`❌ User disconnected: ${socket.id}`);
@@ -160,6 +229,12 @@ export const setupSocketHandlers = (io) => {
       if (socket.userId) {
         connectedUsers.delete(socket.userId);
         onlineUsers.delete(socket.userId);
+        
+        // Remove from queue if present
+        const wasInQueue = removeFromQueue(socket.userId);
+        if (wasInQueue) {
+          console.log(`[Queue] User removed from queue on disconnect. Size: ${waitingQueue.size}`);
+        }
         
         // Update user status in database - mark as offline
         await User.update(
