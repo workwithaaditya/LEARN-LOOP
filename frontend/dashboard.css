@@ -104,6 +104,14 @@
     margin-bottom: var(--spacing-md);
 }
 
+/* Global Search Box */
+.global-search-box {
+    margin-bottom: var(--spacing-xl);
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 .search-input-wrapper {
     position: relative;
     display: flex;
@@ -130,10 +138,21 @@
     transition: all var(--transition-base);
 }
 
+.global-search-box .search-input {
+    padding: 14px var(--spacing-md) 14px 42px;
+    font-size: 1rem;
+    border-radius: 50px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
 .search-input:focus {
     outline: none;
     border-color: var(--color-primary);
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.global-search-box .search-input:focus {
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1), 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .search-input:focus + .search-icon {
@@ -143,6 +162,12 @@
 [data-theme="dark"] .search-input {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .global-search-box .search-input {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Skill Input Container */
