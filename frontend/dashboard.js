@@ -1040,12 +1040,27 @@ function showNotification(message, type = 'info') {
     setTimeout(() => toast.remove(), 300);
   }, 5000);
   
-  // Add to message box
+  // Add to message box (skip temporary messages)
   addMessageToBox(message, type);
 }
 
 // Message Box Functions
-function addMessageToBox(message, type = 'info') {
+function addMessageToBox(message, type = 'info', skipStorage = false) {
+  // Skip certain temporary messages from being stored
+  const tempMessages = [
+    'no users available',
+    'no one available',
+    'searching',
+    'waiting in queue',
+    'looking for',
+    'keep waiting',
+    'retrying'
+  ];
+  
+  const shouldSkip = skipStorage || tempMessages.some(temp => message.toLowerCase().includes(temp));
+  
+  if (shouldSkip) return; // Don't store temporary search/queue messages
+  
   const messageObj = {
     id: Date.now(),
     message,
