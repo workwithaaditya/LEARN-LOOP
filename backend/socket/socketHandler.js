@@ -7,6 +7,7 @@ import {
   removeFromQueue, 
   matchFromQueue 
 } from '../routes/queue.js';
+import { sendPingNotification } from '../utils/emailService.js';
 
 const connectedUsers = new Map(); // userId -> socketId
 const onlineUsers = new Set(); // Set of online userIds
@@ -72,6 +73,10 @@ export const setupSocketHandlers = (io) => {
           message: message || 'wants to connect with you!'
         });
 
+        // Get receiver details for email
+        const receiver = await User.findByPk(toUserId);
+        const sender = await User.findByPk(socket.userId);
+
         const recipientSocketId = connectedUsers.get(toUserId);
         
         // If user is online, send real-time notification
@@ -83,6 +88,17 @@ export const setupSocketHandlers = (io) => {
             timestamp: ping.createdAt,
             isRead: false
           });
+        }
+        
+        // Send email notification (works even if user is offline)
+        if (receiver && receiver.email && sender) {
+          await sendPingNotification({
+            to: receiver.email,
+            receiverName: receiver.name,
+            senderName: sender.name,
+            message: ping.message
+          });
+          console.log(`📧 Email notification sent to ${receiver.email}`);
         }
         
         // Confirm to sender
