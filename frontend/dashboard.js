@@ -415,7 +415,81 @@ quickSkillInput.addEventListener('keypress', async (e) => {
 
 // User search
 userSearchInput.addEventListener('input', (e) => {
-  filterUsers(e.target.value);
+  const searchTerm = e.target.value.trim();
+  const suggestionsContainer = document.getElementById('searchSuggestions');
+  
+  if (!searchTerm) {
+    suggestionsContainer.classList.remove('active');
+    suggestionsContainer.innerHTML = '';
+    return;
+  }
+  
+  // Filter users based on search term
+  const term = searchTerm.toLowerCase();
+  
+  const fuzzyMatch = (text, search) => {
+    if (!text) return false;
+    text = text.toLowerCase();
+    if (text.includes(search)) return true;
+    
+    let searchIndex = 0;
+    for (let i = 0; i < text.length && searchIndex < search.length; i++) {
+      if (text[i] === search[searchIndex]) {
+        searchIndex++;
+      }
+    }
+    if (searchIndex === search.length) return true;
+    
+    const searchChars = search.split('');
+    const matchCount = searchChars.filter(char => text.includes(char)).length;
+    const similarity = matchCount / search.length;
+    return similarity >= 0.7;
+  };
+  
+  const filtered = allUsers.filter(user => {
+    const nameMatch = fuzzyMatch(user.name, term);
+    const skillMatch = user.skills && user.skills.some(skill => fuzzyMatch(skill, term));
+    return nameMatch || skillMatch;
+  });
+  
+  // Show suggestions
+  if (filtered.length === 0) {
+    suggestionsContainer.innerHTML = '<div class="no-suggestions">No users found</div>';
+    suggestionsContainer.classList.add('active');
+  } else {
+    suggestionsContainer.innerHTML = '';
+    filtered.slice(0, 8).forEach(user => { // Show max 8 suggestions
+      const suggestionItem = document.createElement('div');
+      suggestionItem.className = 'suggestion-item';
+      suggestionItem.onclick = () => {
+        openProfileModal(user);
+        suggestionsContainer.classList.remove('active');
+        userSearchInput.value = '';
+      };
+      
+      suggestionItem.innerHTML = `
+        <img src="${user.avatar}" alt="${user.name}" class="suggestion-avatar">
+        <div class="suggestion-info">
+          <div class="suggestion-name">${user.name}</div>
+          <div class="suggestion-skills">${user.skills ? user.skills.join(', ') : 'No skills listed'}</div>
+        </div>
+        <div class="suggestion-status ${user.isAvailable ? 'online' : 'offline'}"></div>
+      `;
+      
+      suggestionsContainer.appendChild(suggestionItem);
+    });
+    suggestionsContainer.classList.add('active');
+  }
+});
+
+// Close suggestions when clicking outside
+document.addEventListener('click', (e) => {
+  const suggestionsContainer = document.getElementById('searchSuggestions');
+  const searchBox = document.querySelector('.global-search-box');
+  
+  if (searchBox && !searchBox.contains(e.target)) {
+    suggestionsContainer.classList.remove('active');
+  }
 });
 
 // Self profile modal handlers
