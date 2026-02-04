@@ -58,12 +58,15 @@ router.get('/logout', (req, res) => {
 // @desc    Get current logged in user
 router.get('/current-user', (req, res) => {
   // Debug logging
+  console.log('=== Auth Check ===');
   console.log('Session ID:', req.sessionID);
+  console.log('Session Cookie:', req.headers.cookie);
   console.log('Is Authenticated:', req.isAuthenticated());
-  console.log('Session:', req.session);
-  console.log('User:', req.user);
+  console.log('Session User:', req.session?.passport?.user);
+  console.log('Req User:', req.user);
+  console.log('Origin:', req.headers.origin);
   
-  if (req.isAuthenticated()) {
+  if (req.isAuthenticated() && req.user) {
     res.json({
       authenticated: true,
       user: {
@@ -77,8 +80,26 @@ router.get('/current-user', (req, res) => {
       }
     });
   } else {
+    console.log('❌ Not authenticated - Missing session or user');
     res.json({ authenticated: false });
   }
+});
+
+// @route   GET /auth/test-session
+// @desc    Test session persistence
+router.get('/test-session', (req, res) => {
+  if (!req.session.views) {
+    req.session.views = 0;
+  }
+  req.session.views++;
+  
+  res.json({
+    sessionID: req.sessionID,
+    views: req.session.views,
+    authenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    cookie: req.session.cookie
+  });
 });
 
 export default router;

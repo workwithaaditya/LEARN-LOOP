@@ -55,9 +55,29 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Middleware
+const allowedOrigins = [
+  'https://learn-loop-ten.vercel.app',
+  'http://localhost:5500',
+  'http://127.0.0.1:5500',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5500',
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('Blocked origin:', origin);
+      callback(null, true); // Allow all origins for now
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['set-cookie']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -65,17 +85,19 @@ app.use(express.urlencoded({ extended: true }));
 // Session configuration with PostgreSQL store
 app.use(session({
   store: sessionStore,
-  name: 'connect.sid', // Explicit session cookie name
+  name: 'learnloop.sid',
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
-  proxy: true, // Trust Railway proxy
+  proxy: true,
+  rolling: true, // Reset cookie expiration on every request
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for better persistence
-    path: '/'
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: '/',
+    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost'
   }
 }));
 

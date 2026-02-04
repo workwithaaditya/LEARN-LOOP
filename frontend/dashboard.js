@@ -118,35 +118,55 @@ let unreadPingsCount = 0;
 
 // Initialize
 async function init() {
-  // Check authentication
-  const authCheck = await fetch(`${API_URL}/auth/current-user`, {
-    credentials: 'include'
-  });
+  try {
+    // Check authentication
+    console.log('Checking authentication...');
+    const authCheck = await fetch(`${API_URL}/auth/current-user`, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (!authCheck.ok) {
+      console.error('Auth check failed with status:', authCheck.status);
+      window.location.href = '/index.html';
+      return;
+    }
+    
+    const authData = await authCheck.json();
+    console.log('Auth response:', authData);
+    
+    if (!authData.authenticated) {
+      console.log('Not authenticated, redirecting to login');
+      window.location.href = '/index.html';
+      return;
+    }
+    
+    currentUser = authData.user;
+    console.log('Authenticated user:', currentUser);
+    displayUserInfo();
   
-  const authData = await authCheck.json();
-  
-  if (!authData.authenticated) {
+    // Fetch ICE servers (STUN + TURN)
+    await fetchIceServers();
+    
+    // Join socket room
+    socket.emit('user:join', { userId: currentUser.id });
+    
+    // Load users, friends, and pings
+    loadUsers();
+    loadFriends();
+    loadPings();
+    
+    // Setup theme
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', currentTheme);
+  } catch (error) {
+    console.error('Initialization error:', error);
+    alert('Failed to load dashboard. Please try logging in again.');
     window.location.href = '/index.html';
-    return;
   }
-  
-  currentUser = authData.user;
-  displayUserInfo();
-  
-  // Fetch ICE servers (STUN + TURN)
-  await fetchIceServers();
-  
-  // Join socket room
-  socket.emit('user:join', { userId: currentUser.id });
-  
-  // Load users, friends, and pings
-  loadUsers();
-  loadFriends();
-  loadPings();
-  
-  // Setup theme
-  const currentTheme = localStorage.getItem('theme') || 'light';
-  document.documentElement.setAttribute('data-theme', currentTheme);
 }
 
 function displayUserInfo() {
