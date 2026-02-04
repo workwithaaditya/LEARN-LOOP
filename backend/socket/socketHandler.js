@@ -89,6 +89,17 @@ export const setupSocketHandlers = (io) => {
       }
     });
 
+    socket.on('call:declined', async ({ callerId }) => {
+      const callerSocketId = connectedUsers.get(callerId);
+      
+      if (callerSocketId) {
+        io.to(callerSocketId).emit('call:declined');
+      }
+      
+      // Mark caller as not in call
+      await User.update({ inCall: false }, { where: { id: callerId } });
+    });
+
     socket.on('call:ice-candidate', ({ toUserId, candidate }) => {
       const recipientSocketId = connectedUsers.get(toUserId);
       

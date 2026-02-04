@@ -224,7 +224,7 @@ function displayUsers(users) {
 
 function pingUser(user) {
   socket.emit('user:ping', {
-    toUserId: user._id,
+    toUserId: user.id,
     message: `${currentUser.name} wants to connect with you!`,
     fromUser: currentUser
   });
@@ -309,6 +309,8 @@ startRandomCallBtn.addEventListener('click', async () => {
 
 async function startVideoCall(user) {
   try {
+    currentCallUser = user;
+    
     localStream = await navigator.mediaDevices.getUserMedia({ 
       video: true, 
       audio: true 
@@ -336,9 +338,22 @@ async function startVideoCall(user) {
     peerConnection.onicecandidate = (event) => {
       if (event.candidate) {
         socket.emit('call:ice-candidate', {
-          toUserId: user._id,
+          toUserId: user.id,
           candidate: event.candidate
         });
+      }
+    };
+    
+    // Handle connection state changes
+    peerConnection.onconnectionstatechange = () => {
+      console.log('Connection state:', peerConnection.connectionState);
+      if (peerConnection.connectionState === 'connected') {
+        videoInfo.textContent = `Connected with ${user.name}`;
+      } else if (peerConnection.connectionState === 'disconnected') {
+        videoInfo.textContent = 'Connection lost...';
+      } else if (peerConnection.connectionState === 'failed') {
+        videoInfo.textContent = 'Connection failed. Please try again.';
+        setTimeout(endVideoCall, 3000);
       }
     };
     
@@ -347,14 +362,21 @@ async function startVideoCall(user) {
     await peerConnection.setLocalDescription(offer);
     
     socket.emit('call:initiate', {
-      toUserId: user._id,
+      toUserId: user.id,
       offer: offer,
       fromUser: currentUser
     });
     
   } catch (error) {
     console.error('Error starting video call:', error);
-    alert('Failed to access camera/microphone');
+    if (error.name === 'NotAllowedError') {
+      alert('Camera/microphone access denied. Please allow permissions and try again.');
+    } else if (error.name === 'NotFoundError') {
+      alert('No camera or microphone found. Please connect a device.');
+    } else {
+      alert('Failed to start video call: ' + error.message);
+    }
+    endVideoCall();
   }
 }
 
@@ -368,7 +390,7 @@ function endVideoCall() {
   }
   
   if (currentCallUser) {
-    socket.emit('call:end', { otherUserId: currentCallUser._id });
+    socket.emit('call:end', { otherUserId: currentCallUser.id });
   }
   
   localStream = null;
@@ -382,15 +404,29 @@ function endVideoCall() {
 
 // Video controls
 toggleVideoBtn.addEventListener('click', () => {
-  const videoTrack = localStream.getVideoTracks()[0];
-  videoTrack.enabled = !videoTrack.enabled;
-  toggleVideoBtn.style.opacity = videoTrack.enabled ? '1' : '0.5';
+  if (localStream) {
+    const videoTrack = localStream.getVideoTracks()[0];
+    if (videoTrack) {
+      videoTrack.enabled = !videoTrack.enabled;
+      toggleVideoBtn.style.opacity = videoTrack.enabled ? '1' : '0.5';
+      toggleVideoBtn.innerHTML = videoTrack.enabled ? 
+        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>' :
+        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>';
+    }
+  }
 });
 
 toggleAudioBtn.addEventListener('click', () => {
-  const audioTrack = localStream.getAudioTracks()[0];
-  audioTrack.enabled = !audioTrack.enabled;
-  toggleAudioBtn.style.opacity = audioTrack.enabled ? '1' : '0.5';
+  if (localStream) {
+    const audioTrack = localStream.getAudioTracks()[0];
+    if (audioTrack) {
+      audioTrack.enabled = !audioTrack.enabled;
+      toggleAudioBtn.style.opacity = audioTrack.enabled ? '1' : '0.5';
+      toggleAudioBtn.innerHTML = audioTrack.enabled ?
+        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>' :
+        '<svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M16 9v6m0 0l-4-2m4 2l4-2M7 8v8m0 0l-4-2m4 2l4-2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2"/></svg>';
+    }
+  }
 });
 
 skipCallBtn.addEventListener('click', () => {
@@ -410,57 +446,97 @@ socket.on('users:updated', () => {
 });
 
 socket.on('call:incoming', async (data) => {
-  const accept = confirm(`${data.from.name} wants to video call you. Accept?`);
-  
-  if (accept) {
-    currentCallUser = data.from;
+  try {
+    const accept = confirm(`${data.from.name} wants to video call you. Accept?`);
     
-    localStream = await navigator.mediaDevices.getUserMedia({ 
-      video: true, 
-      audio: true 
-    });
-    
-    localVideo.srcObject = localStream;
-    videoModal.classList.add('active');
-    videoInfo.textContent = `Connected with ${data.from.name}`;
-    
-    peerConnection = new RTCPeerConnection(config);
-    
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-    });
-    
-    peerConnection.ontrack = (event) => {
-      remoteVideo.srcObject = event.streams[0];
-    };
-    
-    peerConnection.onicecandidate = (event) => {
-      if (event.candidate) {
-        socket.emit('call:ice-candidate', {
-          toUserId: data.callerId,
-          candidate: event.candidate
-        });
-      }
-    };
-    
-    await peerConnection.setRemoteDescription(data.offer);
-    const answer = await peerConnection.createAnswer();
-    await peerConnection.setLocalDescription(answer);
-    
-    socket.emit('call:answer', {
-      callerId: data.callerId,
-      answer: answer
-    });
+    if (accept) {
+      currentCallUser = data.from;
+      
+      localStream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      
+      localVideo.srcObject = localStream;
+      videoModal.classList.add('active');
+      videoInfo.textContent = `Connecting with ${data.from.name}...`;
+      
+      peerConnection = new RTCPeerConnection(config);
+      
+      localStream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, localStream);
+      });
+      
+      peerConnection.ontrack = (event) => {
+        remoteVideo.srcObject = event.streams[0];
+        videoInfo.textContent = `Connected with ${data.from.name}`;
+      };
+      
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          socket.emit('call:ice-candidate', {
+            toUserId: data.callerId,
+            candidate: event.candidate
+          });
+        }
+      };
+      
+      // Handle connection state changes
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          videoInfo.textContent = `Connected with ${data.from.name}`;
+        } else if (peerConnection.connectionState === 'disconnected') {
+          videoInfo.textContent = 'Connection lost...';
+        } else if (peerConnection.connectionState === 'failed') {
+          videoInfo.textContent = 'Connection failed. Please try again.';
+          setTimeout(endVideoCall, 3000);
+        }
+      };
+      
+      await peerConnection.setRemoteDescription(data.offer);
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      
+      socket.emit('call:answer', {
+        callerId: data.callerId,
+        answer: answer
+      });
+    } else {
+      // User declined the call
+      socket.emit('call:declined', { callerId: data.callerId });
+    }
+  } catch (error) {
+    console.error('Error handling incoming call:', error);
+    if (error.name === 'NotAllowedError') {
+      alert('Camera/microphone access denied. Please allow permissions.');
+    } else {
+      alert('Failed to answer call: ' + error.message);
+    }
+    endVideoCall();
   }
 });
 
 socket.on('call:answered', async (data) => {
-  await peerConnection.setRemoteDescription(data.answer);
+  try {
+    await peerConnection.setRemoteDescription(data.answer);
+  } catch (error) {
+    console.error('Error setting remote description:', error);
+  }
+});
+
+socket.on('call:declined', () => {
+  alert('Call declined by the other user.');
+  endVideoCall();
 });
 
 socket.on('call:ice-candidate', async (data) => {
-  if (peerConnection) {
-    await peerConnection.addIceCandidate(data.candidate);
+  try {
+    if (peerConnection) {
+      await peerConnection.addIceCandidate(data.candidate);
+    }
+  } catch (error) {
+    console.error('Error adding ICE candidate:', error);
   }
 });
 
