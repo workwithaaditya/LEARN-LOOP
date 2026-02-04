@@ -427,6 +427,8 @@ closeSelfProfBtn.addEventListener('click', () => {
 });
 
 // Random video call
+let queuePollInterval = null;
+
 startRandomCallBtn.addEventListener('click', async () => {
   if (isSearchingMatch) return; // Prevent multiple clicks
   
@@ -455,11 +457,32 @@ startRandomCallBtn.addEventListener('click', async () => {
       videoInfo.classList.remove('hidden');
       remoteLabel.textContent = 'Waiting for someone to join...';
       showNotification('Waiting in queue for someone to connect...', 'info');
-      // Listen for match from server
-      socket.once('match:found', async (matchData) => {
-        currentCallUser = matchData.match;
-        await startVideoCall(matchData.match);
-      });
+      
+      // Poll for match every 3 seconds as fallback
+      queuePollInterval = setInterval(async () => {
+        if (!videoModal.classList.contains('active') || currentCallUser) {
+          clearInterval(queuePollInterval);
+          return;
+        }
+        
+        try {
+          const pollResponse = await fetch(`${API_URL}/api/match/join-queue`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ socketId: socket.id })
+          });
+          const pollData = await pollResponse.json();
+          
+          if (pollData.match) {
+            clearInterval(queuePollInterval);
+            currentCallUser = pollData.match;
+            await startVideoCall(pollData.match);
+          }
+        } catch (err) {
+          console.error('Queue poll error:', err);
+        }
+      }, 3000);
     }
   } catch (error) {
     console.error('Error joining queue:', error);
@@ -572,6 +595,12 @@ function cleanupCurrentCall() {
 function endVideoCall() {
   cleanupCurrentCall();
   
+  // Clear polling interval
+  if (queuePollInterval) {
+    clearInterval(queuePollInterval);
+    queuePollInterval = null;
+  }
+  
   // Close the modal
   videoModal.classList.remove('active');
 }
@@ -609,6 +638,12 @@ skipCallBtn.addEventListener('click', async () => {
   // Cleanup current connection
   cleanupCurrentCall();
   
+  // Clear any existing poll interval
+  if (queuePollInterval) {
+    clearInterval(queuePollInterval);
+    queuePollInterval = null;
+  }
+  
   // Show searching state
   motivationalQuote.textContent = getRandomQuote();
   videoInfo.classList.remove('hidden');
@@ -636,11 +671,32 @@ skipCallBtn.addEventListener('click', async () => {
       videoInfo.classList.remove('hidden');
       remoteLabel.textContent = 'Waiting for next person...';
       showNotification('Waiting in queue for someone to connect...', 'info');
-      // Listen for match from server
-      socket.once('match:found', async (matchData) => {
-        currentCallUser = matchData.match;
-        await startVideoCall(matchData.match);
-      });
+      
+      // Poll for match every 3 seconds as fallback
+      queuePollInterval = setInterval(async () => {
+        if (!videoModal.classList.contains('active') || currentCallUser) {
+          clearInterval(queuePollInterval);
+          return;
+        }
+        
+        try {
+          const pollResponse = await fetch(`${API_URL}/api/match/join-queue`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({ socketId: socket.id })
+          });
+          const pollData = await pollResponse.json();
+          
+          if (pollData.match) {
+            clearInterval(queuePollInterval);
+            currentCallUser = pollData.match;
+            await startVideoCall(pollData.match);
+          }
+        } catch (err) {
+          console.error('Queue poll error:', err);
+        }
+      }, 3000);
     }
   } catch (error) {
     console.error('Error joining queue:', error);
