@@ -288,6 +288,11 @@ function filterUsers(searchTerm) {
 function displayUsers(users) {
   usersList.innerHTML = '';
   
+  if (users.length === 0) {
+    usersList.innerHTML = '<p class="no-users">No users found matching your search</p>';
+    return;
+  }
+  
   users.forEach(user => {
     const userItem = document.createElement('div');
     userItem.className = 'user-item';
