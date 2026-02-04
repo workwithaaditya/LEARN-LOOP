@@ -64,6 +64,7 @@ app.use(express.urlencoded({ extended: true }));
 // Session configuration with PostgreSQL store
 app.use(session({
   store: sessionStore,
+  name: 'connect.sid', // Explicit session cookie name
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
@@ -72,9 +73,8 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
-    domain: process.env.NODE_ENV === 'production' ? undefined : 'localhost',
-    partitioned: true // Enable partitioned cookies for better browser compatibility
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days for better persistence
+    path: '/'
   }
 }));
 
